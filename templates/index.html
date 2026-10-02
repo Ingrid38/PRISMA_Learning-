@@ -33,6 +33,13 @@
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
+        audio::-webkit-media-controls-panel {
+            background-color: #1e293b;
+        }
+        audio::-webkit-media-controls-current-time-display,
+        audio::-webkit-media-controls-time-remaining-display {
+            color: #38bdf8;
+        }
     </style>
 </head>
 <body class="text-slate-100 p-4 md:p-8">
@@ -101,7 +108,7 @@
 
                 <div class="flex items-center justify-between pt-2">
                     <span class="text-xs text-slate-400 flex items-center gap-1.5">
-                        <span class="text-amber-400">⚡</span> Powered by Gemini Flash & Auditoría Fernández-Huerta
+                        <span class="text-amber-400">⚡</span> Gemini Flash Lite · Audio Neuronal · Auditoría Fernández-Huerta
                     </span>
                     <button type="submit" id="btnProcesar" 
                             class="px-8 py-3.5 rounded-xl font-semibold text-slate-950 pulse-rainbow hover:opacity-95 transition shadow-lg shadow-cyan-500/25 flex items-center gap-2 cursor-pointer">
@@ -115,14 +122,14 @@
         <!-- Indicador de Carga -->
         <div id="loading" class="hidden text-center py-12 space-y-4">
             <div class="w-14 h-14 mx-auto rounded-full border-4 border-cyan-500/20 border-t-cyan-400 animate-spin"></div>
-            <p class="text-lg font-semibold text-cyan-300">Refractando contenido hacia el espectro accesible...</p>
-            <p class="text-xs text-slate-400 max-w-md mx-auto">Aplicando reglas de Lectura Fácil, extrayendo glosario, calculando métricas de legibilidad y guardando en Supabase.</p>
+            <p class="text-lg font-semibold text-cyan-300">Refractando contenido hacia el espectro multimodal accesible...</p>
+            <p class="text-xs text-slate-400 max-w-md mx-auto">Generando Lectura Fácil, síntesis de audio MP3, glosario contextual y ficha imprimible.</p>
         </div>
 
         <!-- Panel de Resultados (Comparativa y Espectro DUA) -->
         <section id="resultados" class="hidden space-y-6">
 
-            <!-- Banner Métrico: Salto de Legibilidad -->
+            <!-- Banner Métrico: Salto de Legibilidad y Acciones Globales -->
             <div class="glass-card rounded-2xl p-6 border border-cyan-500/30 bg-gradient-to-r from-slate-900/80 via-slate-900/60 to-slate-900/80">
                 <div class="flex flex-col md:flex-row items-center justify-between gap-6">
                     <div>
@@ -131,6 +138,7 @@
                         <p class="text-sm text-slate-400" id="resFormatoOrigen">Formato origen: Texto</p>
                     </div>
 
+                    <!-- Métrica Fernández-Huerta -->
                     <div class="flex items-center gap-4 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
                         <div class="text-center px-4">
                             <span class="block text-xs text-slate-400">Original</span>
@@ -144,6 +152,43 @@
                             <span class="block text-[10px] text-emerald-400">DUA Aprobado</span>
                         </div>
                     </div>
+
+                    <!-- Botón Descargar Ficha PDF Imprimible -->
+                    <div>
+                        <a id="btnDescargarPdf" href="#" target="_blank"
+                           class="px-5 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-semibold text-sm transition shadow-lg shadow-sky-500/20 flex items-center gap-2 cursor-pointer text-center justify-center">
+                            <span>📥</span>
+                            <span>Descargar Ficha PDF para Imprimir</span>
+                        </a>
+                        <p class="text-[11px] text-slate-400 text-center mt-1.5">Optimizado para bajo coste de tinta</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Módulo Multimodal: Audio Narrado Accesible -->
+            <div class="glass-card rounded-2xl p-6 border border-sky-500/30 bg-slate-900/60 space-y-4">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                    <div>
+                        <h4 class="font-semibold text-sky-300 flex items-center gap-2">
+                            <span>🎧</span> Audio Narrado Accesible (Text-to-Speech Neuronal)
+                        </h4>
+                        <p class="text-xs text-slate-400 mt-0.5">Para estudiantes con discapacidad visual, baja visión o dificultades severas de decodificación.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <a id="linkDescargarAudio" href="#" download="audio_accesible.mp3" target="_blank"
+                           class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 text-xs font-medium border border-slate-700 transition flex items-center gap-1.5">
+                            <span>⬇️</span> Descargar MP3
+                        </a>
+                        <button id="btnRegenerarAudio" class="px-3.5 py-1.5 rounded-lg bg-sky-600/30 hover:bg-sky-600/50 text-sky-200 text-xs font-medium border border-sky-500/40 transition flex items-center gap-1.5">
+                            <span id="iconRegenerarAudio">🔄</span> Actualizar Audio
+                        </button>
+                    </div>
+                </div>
+
+                <div class="w-full pt-1">
+                    <audio id="playerAudio" controls class="w-full rounded-lg outline-none">
+                        Tu navegador no soporta el reproductor de audio HTML5.
+                    </audio>
                 </div>
             </div>
 
@@ -264,6 +309,18 @@
                 document.getElementById('resContenidoOriginal').textContent = data.contenido_original || '(Archivo procesado visualmente)';
                 document.getElementById('editorLecturaFacil').value = data.lectura_facil;
 
+                // Configurar enlace de Descargar PDF
+                const btnPdf = document.getElementById('btnDescargarPdf');
+                btnPdf.href = `/api/descargar-pdf/${adaptacionActualId}`;
+
+                // Configurar reproductor de audio
+                const playerAudio = document.getElementById('playerAudio');
+                const linkAudio = document.getElementById('linkDescargarAudio');
+                if (data.audio_mp3_url) {
+                    playerAudio.src = data.audio_mp3_url;
+                    linkAudio.href = data.audio_mp3_url;
+                }
+
                 // Renderizar glosario
                 const glosarioDiv = document.getElementById('glosarioContenedor');
                 glosarioDiv.innerHTML = '';
@@ -312,6 +369,41 @@
                 }
             } catch (e) {
                 alert('Error al guardar: ' + e.message);
+            }
+        });
+
+        // Botón Regenerar Audio con Cambios
+        document.getElementById('btnRegenerarAudio').addEventListener('click', async () => {
+            if (!adaptacionActualId) return;
+            const nuevoTexto = document.getElementById('editorLecturaFacil').value;
+            const btn = document.getElementById('btnRegenerarAudio');
+            const icon = document.getElementById('iconRegenerarAudio');
+
+            btn.disabled = true;
+            icon.classList.add('animate-spin');
+
+            try {
+                const res = await fetch(`/api/generar-audio/${adaptacionActualId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ texto: nuevoTexto })
+                });
+                const data = await res.json();
+                if (res.ok && data.audio_mp3_url) {
+                    const playerAudio = document.getElementById('playerAudio');
+                    const linkAudio = document.getElementById('linkDescargarAudio');
+                    playerAudio.src = data.audio_mp3_url;
+                    linkAudio.href = data.audio_mp3_url;
+                    playerAudio.play();
+                    alert('✓ ¡Audio regenerado con éxito!');
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo generar el audio'));
+                }
+            } catch (e) {
+                alert('Error al regenerar audio: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                icon.classList.remove('animate-spin');
             }
         });
     </script>

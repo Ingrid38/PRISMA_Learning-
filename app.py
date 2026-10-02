@@ -1,11 +1,14 @@
+import io
 import os
 import uuid
-from flask import Flask, jsonify, request, render_template, send_from_directory
+from flask import Flask, jsonify, request, render_template, Response, send_file
 from dotenv import load_dotenv
 from db import db
 from legibilidad import calcular_legibilidad
 from ai_service import adaptar_recurso_dua
 from parser_service import extraer_texto_pdf, extraer_texto_pptx, preparar_imagen_base64
+from audio_service import generar_audio_mp3
+from pdf_service import generar_ficha_pdf
 
 load_dotenv()
 
@@ -54,7 +57,10 @@ def auditar_legibilidad():
 def adaptar_recurso():
     """
     Endpoint principal de Refracción Multimodal DUA:
-    Recibe texto directo o un archivo (PDF, PPTX, Imagen) y genera la versión accesible.
+    Recibe texto directo o un archivo (PDF, PPTX, Imagen) y genera:
+    1. Lectura Fácil con métricas Fernández-Huerta
+    2. Glosario y descripción visual / Alt-Text
+    3. Audio narrado MP3 almacenado en Supabase Storage
     """
     try:
         titulo = request.form.get("titulo") or "Recurso Pedagógico"
@@ -71,7 +77,7 @@ def adaptar_recurso():
             file_bytes = file.read()
             ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
 
-            # Subir a Supabase Storage (bucket 'origenes')
+            # Subir archivo origen a Supabase Storage (bucket 'origenes')
             storage_path = f"doc_{uuid.uuid4().hex[:8]}_{filename}"
             try:
                 archivo_url = db.upload_file(
@@ -113,9 +119,9 @@ def adaptar_recurso():
             return jsonify({"error": "No se proporcionó ningún texto ni archivo para adaptar"}), 400
 
         # 3. Calcular legibilidad original (Índice Fernández-Huerta)
-        metricas_orig = calcular_legibilidad(contenido_extraido) if contenido_extraido else {"score": 40.0}
+        metricas_orig = calcular_legibilidad(contenido_extraido) if contenido_extraido else {"score": 40.0, "nivel": "Dificultad Estimada"}
 
-        # 4. Invocar Motor de Refracción DUA (Gemini Flash)
+        # 4. Invocar Motor de Refracción DUA (Gemini Flash / Lite)
         resultado_ia = adaptar_recurso_dua(
             texto_o_tema=contenido_extraido,
             base64_image=base64_img,
@@ -130,7 +136,22 @@ def adaptar_recurso():
         # 5. Calcular legibilidad del texto adaptado
         metricas_adapt = calcular_legibilidad(texto_adaptado)
 
-        # 6. Guardar en Supabase (recursos_origen y adaptaciones_multimodales)
+        # 6. Generar Audio MP3 Accesible (Fase 3)
+        adapt_id = str(uuid.uuid4())
+        audio_mp3_url = None
+        try:
+            audio_bytes = generar_audio_mp3(texto_adaptado)
+            audio_filename = f"audios/audio_{adapt_id}.mp3"
+            audio_mp3_url = db.upload_file(
+                bucket="accesibles",
+                path=audio_filename,
+                file_bytes=audio_bytes,
+                content_type="audio/mpeg"
+            )
+        except Exception as e:
+            print(f"[Aviso Audio TTS] No se pudo subir audio a Supabase Storage: {e}")
+
+        # 7. Guardar en Supabase (recursos_origen y adaptaciones_multimodales)
         rec_id = str(uuid.uuid4())
         try:
             db.table("recursos_origen").insert({
@@ -139,23 +160,22 @@ def adaptar_recurso():
                 "formato_origen": formato,
                 "archivo_url": archivo_url or "texto_directo",
                 "contenido_extraido": contenido_extraido[:3000],
-                "legibilidad_original": metricas_orig["score"]
+                "legibilidad_original": metricas_orig.get("score", 0.0)
             })
 
-            adapt_id = str(uuid.uuid4())
             db.table("adaptaciones_multimodales").insert({
                 "id": adapt_id,
                 "recurso_id": rec_id,
                 "lectura_facil": texto_adaptado,
-                "legibilidad_adaptada": metricas_adapt["score"],
+                "legibilidad_adaptada": metricas_adapt.get("score", 0.0),
                 "glosario": glosario,
                 "descripcion_visual": desc_visual,
+                "audio_mp3_url": audio_mp3_url,
                 "estado": "borrador",
                 "notas_docente": resultado_ia.get("pautas_docente", "")
             })
         except Exception as e:
             print(f"[Error Supabase] {e}")
-            adapt_id = str(uuid.uuid4())
 
         return jsonify({
             "status": "success",
@@ -169,12 +189,104 @@ def adaptar_recurso():
             "legibilidad_adaptada": metricas_adapt,
             "glosario": glosario,
             "descripcion_visual": desc_visual,
+            "audio_mp3_url": audio_mp3_url,
             "pautas_docente": resultado_ia.get("pautas_docente", ""),
             "archivo_url": archivo_url
         }), 200
 
     except Exception as e:
         print(f"Error en /api/adaptar: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/generar-audio/<id>", methods=["POST"])
+def regenerar_audio(id):
+    """Regenera y actualiza el audio MP3 en Supabase cuando el docente edita el texto"""
+    try:
+        data = request.get_json() or {}
+        texto = data.get("texto", "")
+
+        if not texto:
+            # Consultar el texto de la base de datos
+            res = db.table("adaptaciones_multimodales").select("lectura_facil").eq("id", id).execute()
+            if res and len(res) > 0:
+                texto = res[0].get("lectura_facil", "")
+
+        if not texto:
+            return jsonify({"error": "No hay texto para generar el audio"}), 400
+
+        audio_bytes = generar_audio_mp3(texto)
+        audio_filename = f"audios/audio_{id}_{uuid.uuid4().hex[:4]}.mp3"
+        audio_url = db.upload_file(
+            bucket="accesibles",
+            path=audio_filename,
+            file_bytes=audio_bytes,
+            content_type="audio/mpeg"
+        )
+
+        db.table("adaptaciones_multimodales").eq("id", id).update({"audio_mp3_url": audio_url})
+
+        return jsonify({
+            "status": "ok",
+            "audio_mp3_url": audio_url
+        }), 200
+    except Exception as e:
+        print(f"Error al generar audio: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/descargar-pdf/<id>", methods=["GET"])
+def descargar_ficha_pdf(id):
+    """
+    Genera y descarga en tiempo real una Ficha Educativa en PDF accesible
+    optimizada para impresión física en blanco y negro (bajo coste de tinta).
+    """
+    try:
+        # Obtener los datos de la adaptación y del recurso origen
+        adapt_res = db.table("adaptaciones_multimodales").select("*").eq("id", id).execute()
+        if not adapt_res or len(adapt_res) == 0:
+            return jsonify({"error": "Adaptación no encontrada"}), 404
+
+        adapt = adapt_res[0]
+        recurso_id = adapt.get("recurso_id")
+        
+        titulo = "Ficha Educativa Accesible"
+        score_orig = None
+        if recurso_id:
+            rec_res = db.table("recursos_origen").select("titulo, legibilidad_original").eq("id", recurso_id).execute()
+            if rec_res and len(rec_res) > 0:
+                titulo = rec_res[0].get("titulo") or titulo
+                score_orig = rec_res[0].get("legibilidad_original")
+
+        lectura_facil = adapt.get("lectura_facil", "")
+        glosario = adapt.get("glosario") or []
+        desc_visual = adapt.get("descripcion_visual") or ""
+        score_adapt = adapt.get("legibilidad_adaptada")
+        pautas = adapt.get("notas_docente") or ""
+
+        # Generar bytes del PDF con ReportLab
+        pdf_bytes = generar_ficha_pdf(
+            titulo=titulo,
+            lectura_facil=lectura_facil,
+            glosario=glosario,
+            descripcion_visual=desc_visual,
+            score_original=float(score_orig) if score_orig is not None else None,
+            score_adaptado=float(score_adapt) if score_adapt is not None else None,
+            pautas_docente=pautas
+        )
+
+        # Sanitizar nombre de archivo para descarga
+        safe_titulo = "".join(c for c in titulo if c.isalnum() or c in (' ', '_', '-')).strip().replace(' ', '_')[:30]
+        filename = f"PRISMA_{safe_titulo}.pdf"
+
+        return Response(
+            pdf_bytes,
+            mimetype="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}",
+                "Content-Type": "application/pdf"
+            }
+        )
+    except Exception as e:
+        print(f"Error al generar PDF: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/recursos", methods=["GET"])
