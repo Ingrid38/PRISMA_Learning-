@@ -8,23 +8,65 @@ from dotenv import load_dotenv
 load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")  # Soporte preparado para Groq
 
-def invocar_gemini(prompt: str, base64_image: str = None, mime_type: str = "image/jpeg", max_retries: int = 3) -> dict:
+# Modelos en cascada por orden de prioridad (Lite primero por velocidad y menor saturación)
+GEMINI_MODELS = [
+    "gemini-flash-lite-latest",  # Ultrarrápido, menor latencia y alta disponibilidad
+    "gemini-flash-latest"        # Modelo de respaldo
+]
+
+def invocar_groq(prompt: str) -> dict:
     """
-    Envía prompt e imagen opcional a Gemini Flash con reintentos automáticos
-    y espera una respuesta JSON estructurada.
+    [PREPARADO PARA EL FUTURO]
+    Llamada a Groq Cloud con Llama-3.3-70b-versatile.
+    Se activará automáticamente cuando configures GROQ_API_KEY en tu .env.
+    Velocidad promedio: >300 tokens/segundo.
+    """
+    if not GROQ_API_KEY:
+        return None
+
+    endpoint = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "llama-3.3-70b-versatile",
+        "messages": [
+            {
+                "role": "system",
+                "content": "Eres PRISMA, copiloto DUA. Responde siempre y exclusivamente en formato JSON válido."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        "response_format": {"type": "json_object"},
+        "temperature": 0.2
+    }
+
+    try:
+        resp = requests.post(endpoint, headers=headers, json=payload, timeout=15)
+        if resp.status_code == 200:
+            content = resp.json()["choices"][0]["message"]["content"]
+            return json.loads(content)
+    except Exception as e:
+        print(f"[Aviso Groq] Falló llamada a Groq: {e}, conmutando a Gemini...")
+    
+    return None
+
+
+def invocar_gemini_multimodal(prompt: str, base64_image: str = None, mime_type: str = "image/jpeg") -> dict:
+    """
+    Invoca Gemini con cascada automática entre modelos (Lite -> Flash)
+    y timeouts rápidos de 20s para evitar bloqueos del navegador.
     """
     if not GEMINI_API_KEY:
         raise ValueError("GEMINI_API_KEY no está configurada en .env")
 
-    headers = {
-        "Content-Type": "application/json",
-        "X-goog-api-key": GEMINI_API_KEY
-    }
-
     parts = []
-    
     if base64_image:
         parts.append({
             "inline_data": {
@@ -32,7 +74,6 @@ def invocar_gemini(prompt: str, base64_image: str = None, mime_type: str = "imag
                 "data": base64_image
             }
         })
-
     parts.append({"text": prompt})
 
     payload = {
@@ -43,33 +84,48 @@ def invocar_gemini(prompt: str, base64_image: str = None, mime_type: str = "imag
         }
     }
 
-    last_error = None
-    for intento in range(1, max_retries + 1):
-        try:
-            resp = requests.post(GEMINI_ENDPOINT, headers=headers, json=payload, timeout=60)
-            if resp.status_code == 200:
-                data = resp.json()
-                raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
-                try:
-                    return json.loads(raw_text)
-                except Exception:
+    headers = {
+        "Content-Type": "application/json",
+        "X-goog-api-key": GEMINI_API_KEY
+    }
+
+    errores = []
+
+    # Cascada inteligente: prueba primero Lite, si falla prueba Flash
+    for model_name in GEMINI_MODELS:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
+        
+        # 2 intentos rápidos por modelo con timeout corto de 25s
+        for intento in range(1, 3):
+            try:
+                # print(f"[IA] Probando {model_name} (intento {intento})...")
+                resp = requests.post(url, headers=headers, json=payload, timeout=25)
+
+                if resp.status_code == 200:
+                    data = resp.json()
+                    raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
                     clean = raw_text.strip()
                     if clean.startswith("```json"):
                         clean = clean[7:]
                     if clean.endswith("```"):
                         clean = clean[:-3]
                     return json.loads(clean.strip())
-            elif resp.status_code in [500, 503, 504, 429]:
-                print(f"[Aviso] Reintento {intento}/{max_retries} por status {resp.status_code} de Google...")
-                time.sleep(2 * intento)
-            else:
-                resp.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            last_error = e
-            print(f"[Aviso] Reintento {intento}/{max_retries} tras error de conexión: {e}")
-            time.sleep(2 * intento)
 
-    raise RuntimeError(f"Error tras {max_retries} intentos con Gemini: {last_error}")
+                elif resp.status_code in [503, 429, 500]:
+                    print(f"[Aviso] {model_name} respondió {resp.status_code}. Reintentando o conmutando...")
+                    time.sleep(1)
+                else:
+                    errores.append(f"{model_name}: {resp.status_code} - {resp.text[:100]}")
+                    break  # Si es error 400 u otro, pasar de inmediato al siguiente modelo
+            except requests.exceptions.Timeout:
+                print(f"[Aviso] Timeout de 25s alcanzado en {model_name}. Conmutando de inmediato...")
+                errores.append(f"{model_name}: Timeout 25s")
+                break  # En timeout no insistir en el mismo modelo saturado; conmutar al siguiente
+            except Exception as e:
+                errores.append(f"{model_name}: {str(e)}")
+                time.sleep(1)
+
+    raise RuntimeError(f"Error tras cascada de modelos Gemini: {'; '.join(errores)}")
 
 
 def adaptar_recurso_dua(texto_o_tema: str, base64_image: str = None, mime_type: str = "image/jpeg") -> dict:
@@ -105,4 +161,11 @@ RESPONDE EXCLUSIVAMENTE CON UN OBJETO JSON con esta estructura exacta:
 CONTENIDO A TRANSFORMAR:
 {texto_o_tema}
 """
-    return invocar_gemini(prompt, base64_image, mime_type)
+    # 1. Si no hay imagen y Groq está configurado, intentar Groq primero (súper veloz)
+    if not base64_image and GROQ_API_KEY:
+        res_groq = invocar_groq(prompt)
+        if res_groq:
+            return res_groq
+
+    # 2. Cascada multimodal rápida con Gemini (Lite -> Flash)
+    return invocar_gemini_multimodal(prompt, base64_image, mime_type)
