@@ -128,16 +128,33 @@ def invocar_gemini_multimodal(prompt: str, base64_image: str = None, mime_type: 
     raise RuntimeError(f"Error tras cascada de modelos Gemini: {'; '.join(errores)}")
 
 
-def adaptar_recurso_dua(texto_o_tema: str, base64_image: str = None, mime_type: str = "image/jpeg") -> dict:
+def adaptar_recurso_dua(texto_o_tema: str, base64_image: str = None, mime_type: str = "image/jpeg", barreras_dua: list = None) -> dict:
     """
     Motor de Refracción Pedagógica DUA:
     Transforma el contenido a Lectura Fácil, genera glosario contextual,
-    descripción accesible (alt-text) y pautas didácticas.
+    descripción accesible (alt-text) y pautas didácticas adaptadas
+    a las barreras observables seleccionadas por el docente.
     """
+    enfoque_barreras = ""
+    if barreras_dua and len(barreras_dua) > 0:
+        mapeo_barreras = {
+            "vocabulario": "- DUA Representación: Ampliar glosario contextual y sustituir términos abstractos por analogías cotidianas.",
+            "atencion": "- DUA Implicación: Párrafos extra breves (máximo 3 líneas), uso de viñetas y conceptos clave resaltados.",
+            "visual": "- DUA Percepción: Descripción visual ultra detallada paso a paso pensada para audiodescripción.",
+            "segunda_lengua": "- DUA Lingüístico: Sintaxis directa en español neutro universal, sin modismos ni metáforas confusas.",
+            "comprension_lenta": "- DUA Andamiaje: Estructura de ideas paso a paso (primero causa, luego efecto)."
+        }
+        instrucciones_especificas = "\n".join([mapeo_barreras[b] for b in barreras_dua if b in mapeo_barreras])
+        if instrucciones_especificas:
+            enfoque_barreras = f"""
+PRIORIDADES PEDAGÓGICAS DUA SELECCIONADAS POR EL DOCENTE PARA ESTE GRUPO:
+{instrucciones_especificas}
+"""
+
     prompt = f"""
 Eres PRISMA, el copiloto pedagógico de diseño universal para el aprendizaje (DUA) para el Reto 03 de ProFuturo.
 Tu misión es transformar el material educativo brindado por el docente en un recurso accesible de LECTURA FÁCIL en español.
-
+{enfoque_barreras}
 REGLAS OBLIGATORIAS DE ADAPTACIÓN (Norma Europea de Lectura Fácil / DUA):
 1. Longitud de oraciones: Máximo 12 a 15 palabras por oración.
 2. Estructura directa: Sujeto + Verbo + Predicado. Evita oraciones subordinadas complejas y voz pasiva.

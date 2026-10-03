@@ -107,13 +107,16 @@ def adaptar_recurso():
                 contenido_extraido = file_bytes.decode("utf-8", errors="ignore")
 
         # 2. Si no viene archivo pero sí texto directo
-        elif request.is_json:
+        barreras_dua = []
+        if request.is_json:
             json_data = request.get_json() or {}
             titulo = json_data.get("titulo", titulo)
             contenido_extraido = json_data.get("texto", "")
             formato = "texto"
+            barreras_dua = json_data.get("barreras", [])
         else:
             contenido_extraido = request.form.get("texto", "")
+            barreras_dua = request.form.getlist("barreras")
 
         if not contenido_extraido and not base64_img:
             return jsonify({"error": "No se proporcionó ningún texto ni archivo para adaptar"}), 400
@@ -121,11 +124,12 @@ def adaptar_recurso():
         # 3. Calcular legibilidad original (Índice Fernández-Huerta)
         metricas_orig = calcular_legibilidad(contenido_extraido) if contenido_extraido else {"score": 40.0, "nivel": "Dificultad Estimada"}
 
-        # 4. Invocar Motor de Refracción DUA (Gemini Flash / Lite)
+        # 4. Invocar Motor de Refracción DUA (Gemini Flash / Lite) con barreras pedagógicas
         resultado_ia = adaptar_recurso_dua(
             texto_o_tema=contenido_extraido,
             base64_image=base64_img,
-            mime_type=mime_type
+            mime_type=mime_type,
+            barreras_dua=barreras_dua
         )
 
         texto_adaptado = resultado_ia.get("lectura_facil", "")
@@ -174,6 +178,18 @@ def adaptar_recurso():
                 "estado": "borrador",
                 "notas_docente": resultado_ia.get("pautas_docente", "")
             })
+
+            # Registrar de forma ética y anónima las barreras pedagógicas observadas
+            if barreras_dua:
+                try:
+                    db.table("observaciones_dua").insert({
+                        "grupo_aula": "Aula_Inclusiva",
+                        "alias_alumno": "Grupo_Docente",
+                        "senales_observadas": barreras_dua,
+                        "estrategias_dua": [resultado_ia.get("pautas_docente", "")]
+                    })
+                except Exception as e_obs:
+                    print(f"[Aviso observaciones_dua] {e_obs}")
         except Exception as e:
             print(f"[Error Supabase] {e}")
 
@@ -287,6 +303,40 @@ def descargar_ficha_pdf(id):
         )
     except Exception as e:
         print(f"Error al generar PDF: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/historial", methods=["GET"])
+def historial_recursos():
+    """Retorna la lista de recursos adaptados con sus enlaces de PDF, Audio y métricas para la biblioteca del docente"""
+    try:
+        # Obtener las últimas 15 adaptaciones
+        adaptaciones = db.table("adaptaciones_multimodales").select("*").order("created_at", ascending=False).limit(15).execute()
+        if not adaptaciones:
+            return jsonify({"historial": []}), 200
+
+        # Obtener los recursos de origen para cruzar títulos y formatos
+        recursos = db.table("recursos_origen").select("id, titulo, formato_origen, legibilidad_original, created_at").order("created_at", ascending=False).limit(30).execute()
+        recursos_map = {r["id"]: r for r in (recursos or [])}
+
+        resultado = []
+        for a in adaptaciones:
+            rec = recursos_map.get(a.get("recurso_id"), {})
+            resultado.append({
+                "adaptacion_id": a.get("id"),
+                "recurso_id": a.get("recurso_id"),
+                "titulo": rec.get("titulo", "Recurso Pedagógico"),
+                "formato": rec.get("formato_origen", "texto"),
+                "score_original": rec.get("legibilidad_original"),
+                "score_adaptado": a.get("legibilidad_adaptada"),
+                "audio_mp3_url": a.get("audio_mp3_url"),
+                "pdf_url": f"/api/descargar-pdf/{a.get('id')}",
+                "estado": a.get("estado", "borrador"),
+                "fecha": a.get("created_at")
+            })
+
+        return jsonify({"historial": resultado}), 200
+    except Exception as e:
+        print(f"Error en /api/historial: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/recursos", methods=["GET"])

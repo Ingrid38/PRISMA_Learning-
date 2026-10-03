@@ -106,6 +106,40 @@
                     </div>
                 </div>
 
+                <!-- Selector de Prioridades Pedagógicas DUA (Opciones Cerradas y Éticas) -->
+                <div class="bg-slate-900/50 rounded-xl p-4 border border-slate-800 space-y-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <label class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                            <span>🎯</span> Prioridades Pedagógicas DUA observadas en el aula:
+                        </label>
+                        <span class="text-[11px] text-amber-300/90 bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 rounded-full">
+                            🛡️ Marco DUA: Sin diagnósticos clínicos ni etiquetas individuales
+                        </span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 text-xs text-slate-300">
+                        <label class="flex items-center gap-2.5 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 hover:border-cyan-500/50 cursor-pointer transition">
+                            <input type="checkbox" name="barreras" value="vocabulario" class="rounded text-cyan-500 focus:ring-cyan-500 bg-slate-900 border-slate-700 w-4 h-4">
+                            <span>Vocabulario abstracto / términos densos</span>
+                        </label>
+                        <label class="flex items-center gap-2.5 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 hover:border-cyan-500/50 cursor-pointer transition">
+                            <input type="checkbox" name="barreras" value="atencion" class="rounded text-cyan-500 focus:ring-cyan-500 bg-slate-900 border-slate-700 w-4 h-4">
+                            <span>Fatiga ante textos largos / atención</span>
+                        </label>
+                        <label class="flex items-center gap-2.5 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 hover:border-cyan-500/50 cursor-pointer transition">
+                            <input type="checkbox" name="barreras" value="visual" class="rounded text-cyan-500 focus:ring-cyan-500 bg-slate-900 border-slate-700 w-4 h-4">
+                            <span>Baja visión / requiere audiodescripción</span>
+                        </label>
+                        <label class="flex items-center gap-2.5 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 hover:border-cyan-500/50 cursor-pointer transition">
+                            <input type="checkbox" name="barreras" value="segunda_lengua" class="rounded text-cyan-500 focus:ring-cyan-500 bg-slate-900 border-slate-700 w-4 h-4">
+                            <span>Segunda lengua / lengua originaria</span>
+                        </label>
+                        <label class="flex items-center gap-2.5 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 hover:border-cyan-500/50 cursor-pointer transition">
+                            <input type="checkbox" name="barreras" value="comprension_lenta" class="rounded text-cyan-500 focus:ring-cyan-500 bg-slate-900 border-slate-700 w-4 h-4">
+                            <span>Ritmo gradual / requiere andamiaje</span>
+                        </label>
+                    </div>
+                </div>
+
                 <div class="flex items-center justify-between pt-2">
                     <span class="text-xs text-slate-400 flex items-center gap-1.5">
                         <span class="text-amber-400">⚡</span> Gemini Flash Lite · Audio Neuronal · Auditoría Fernández-Huerta
@@ -263,6 +297,37 @@
 
         </section>
 
+        <!-- Biblioteca de Recursos Adaptados (Historial en Supabase) -->
+        <section class="glass-card rounded-2xl p-6 md:p-8 space-y-5 shadow-2xl border border-slate-700/50">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+                <div>
+                    <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                        <span>📚</span> Biblioteca de Recursos Adaptados
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-1">
+                        Historial de fichas imprimibles y audios sincronizados en Supabase PostgreSQL & Storage.
+                    </p>
+                </div>
+                <button id="btnRecargarHistorial" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5 self-start sm:self-auto cursor-pointer">
+                    <span id="iconRecargar">🔄</span> Actualizar Biblioteca
+                </button>
+            </div>
+
+            <div id="historialLoading" class="hidden text-center py-8 text-slate-400 text-sm">
+                <div class="w-8 h-8 mx-auto rounded-full border-2 border-cyan-500/20 border-t-cyan-400 animate-spin mb-3"></div>
+                Cargando recursos sincronizados desde Supabase...
+            </div>
+
+            <div id="historialVacio" class="hidden text-center py-8 text-slate-400 text-sm bg-slate-900/30 rounded-xl border border-slate-800/80">
+                <span class="text-2xl block mb-2">📂</span>
+                Aún no has generado adaptaciones. Sube tu primer material escolar arriba.
+            </div>
+
+            <div id="historialContenedor" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
+                <!-- Tarjetas dinámicas inyectadas por JS -->
+            </div>
+        </section>
+
     </main>
 
     <footer class="max-w-6xl mx-auto mt-12 text-center text-xs text-slate-500 border-t border-slate-800 pt-6">
@@ -347,6 +412,7 @@
             } finally {
                 btn.disabled = false;
                 loading.classList.add('hidden');
+                cargarHistorial(); // Actualizar lista tras nuevo recurso
             }
         });
 
@@ -366,6 +432,7 @@
                 });
                 if (res.ok) {
                     alert('✓ ¡Recurso aprobado y sincronizado con Supabase!');
+                    cargarHistorial();
                 }
             } catch (e) {
                 alert('Error al guardar: ' + e.message);
@@ -396,6 +463,7 @@
                     linkAudio.href = data.audio_mp3_url;
                     playerAudio.play();
                     alert('✓ ¡Audio regenerado con éxito!');
+                    cargarHistorial();
                 } else {
                     alert('Error: ' + (data.error || 'No se pudo generar el audio'));
                 }
@@ -406,6 +474,75 @@
                 icon.classList.remove('animate-spin');
             }
         });
+
+        // Cargar Historial de Recursos desde Supabase
+        async function cargarHistorial() {
+            const loading = document.getElementById('historialLoading');
+            const vacio = document.getElementById('historialVacio');
+            const contenedor = document.getElementById('historialContenedor');
+
+            loading.classList.remove('hidden');
+            vacio.classList.add('hidden');
+
+            try {
+                const resp = await fetch('/api/historial');
+                const data = await resp.json();
+                const lista = data.historial || [];
+
+                contenedor.innerHTML = '';
+                if (lista.length === 0) {
+                    vacio.classList.remove('hidden');
+                } else {
+                    lista.forEach(item => {
+                        const card = document.createElement('div');
+                        card.className = 'glass-card rounded-xl p-4 flex flex-col justify-between border border-slate-800 hover:border-cyan-500/40 transition space-y-3';
+
+                        const fechaStr = item.fecha ? new Date(item.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+                        const badgeEstado = item.estado === 'aprobado' 
+                            ? '<span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-semibold">✓ Aprobado</span>'
+                            : '<span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">Borrador</span>';
+
+                        const audioBtn = item.audio_mp3_url
+                            ? `<a href="${item.audio_mp3_url}" target="_blank" download class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 text-xs font-medium border border-slate-700 transition flex items-center gap-1">
+                                 <span>🎧</span> Audio
+                               </a>`
+                            : '';
+
+                        card.innerHTML = `
+                            <div>
+                                <div class="flex items-center justify-between gap-2 mb-1.5">
+                                    <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-800 text-cyan-300 border border-slate-700">${item.formato}</span>
+                                    <div class="flex items-center gap-1.5">${badgeEstado} <span class="text-[10px] text-slate-500">${fechaStr}</span></div>
+                                </div>
+                                <h4 class="font-bold text-slate-100 text-sm line-clamp-2 leading-snug">${item.titulo}</h4>
+                                <div class="flex items-center gap-2 mt-2 text-xs">
+                                    <span class="text-rose-400 font-semibold">${item.score_original != null ? item.score_original : '--'}</span>
+                                    <span class="text-slate-600">➔</span>
+                                    <span class="text-emerald-300 font-bold bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-800/40">${item.score_adaptado != null ? item.score_adaptado : '--'}</span>
+                                    <span class="text-[10px] text-slate-400">Fernández-Huerta</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-800/80">
+                                <a href="${item.pdf_url}" target="_blank" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition flex items-center gap-1.5 shadow-sm shadow-sky-500/20">
+                                    <span>📥</span> Ficha PDF
+                                </a>
+                                ${audioBtn}
+                            </div>
+                        `;
+                        contenedor.appendChild(card);
+                    });
+                }
+            } catch (err) {
+                console.error('Error al cargar historial:', err);
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        document.getElementById('btnRecargarHistorial').addEventListener('click', cargarHistorial);
+
+        // Cargar historial al iniciar
+        document.addEventListener('DOMContentLoaded', cargarHistorial);
     </script>
 </body>
 </html>
