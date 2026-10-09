@@ -2,6 +2,7 @@ import io
 import os
 import uuid
 from flask import Flask, jsonify, request, render_template, Response, send_file
+from werkzeug.exceptions import HTTPException, RequestEntityTooLarge
 from dotenv import load_dotenv
 from db import db
 from legibilidad import calcular_legibilidad
@@ -15,6 +16,22 @@ load_dotenv()
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 30 * 1024 * 1024  # 30 MB max upload
+
+@app.errorhandler(RequestEntityTooLarge)
+def archivo_demasiado_grande(_e):
+    return jsonify({"error": "El archivo supera el límite de 30 MB."}), 413
+
+@app.errorhandler(Exception)
+def error_no_controlado(e):
+    """Las rutas /api siempre responden JSON, también ante un fallo inesperado."""
+    if isinstance(e, HTTPException):
+        if request.path.startswith("/api/"):
+            return jsonify({"error": e.description or "Solicitud no válida"}), e.code
+        return e
+    if request.path.startswith("/api/"):
+        print(f"[Error API] {e}")
+        return jsonify({"error": "No se pudo completar la solicitud. Inténtalo de nuevo."}), 500
+    raise e
 
 @app.route("/", methods=["GET"])
 def index():

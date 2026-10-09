@@ -72,20 +72,9 @@ def generar_audio_mp3(texto: str) -> bytes:
     texto_procesado = texto.strip()[:6000]
 
     try:
-        # Intentar con edge-tts (asíncrono adaptado a síncrono)
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-        if loop.is_running():
-            # Si corre dentro de un event loop existente
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as pool:
-                audio_bytes = pool.submit(asyncio.run, _sintetizar_edge_tts(texto_procesado)).result()
-        else:
-            audio_bytes = loop.run_until_complete(_sintetizar_edge_tts(texto_procesado))
+        audio_bytes = asyncio.run(
+            asyncio.wait_for(_sintetizar_edge_tts(texto_procesado), timeout=25)
+        )
 
         if audio_bytes and len(audio_bytes) > 100:
             return audio_bytes

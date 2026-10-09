@@ -48,7 +48,7 @@ def generar_imagen_referencial(titulo: str = "", texto_apoyo: str = "", prompt_v
             "Content-Type": "application/json",
         },
         json={"prompt": prompt[:1800], "steps": 4},
-        timeout=60,
+        timeout=35,
     )
     if not resp.ok:
         raise RuntimeError(f"Cloudflare imagen {resp.status_code}: {resp.text[:240]}")

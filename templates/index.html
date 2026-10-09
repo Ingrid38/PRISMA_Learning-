@@ -548,6 +548,21 @@
     <script>
         let adaptacionActualId = null;
 
+        async function leerJson(resp) {
+            const tipo = resp.headers.get('content-type') || '';
+            if (!tipo.includes('application/json')) {
+                if (resp.status === 502 || resp.status === 503 || resp.status === 504) {
+                    throw new Error('La adaptación tardó demasiado. Espera un momento e inténtalo de nuevo.');
+                }
+                throw new Error('El servidor no pudo completar la solicitud. Inténtalo de nuevo.');
+            }
+            const data = await resp.json();
+            if (!resp.ok) {
+                throw new Error(data.error || 'Error al procesar el recurso');
+            }
+            return data;
+        }
+
         document.getElementById('archivo').addEventListener('change', (e) => {
             const etiqueta = document.getElementById('nombreArchivo');
             const archivo = e.target.files[0];
@@ -576,11 +591,7 @@
                     method: 'POST',
                     body: formData
                 });
-                const data = await resp.json();
-
-                if (!resp.ok) {
-                    throw new Error(data.error || 'Error al procesar recurso');
-                }
+                const data = await leerJson(resp);
 
                 adaptacionActualId = data.adaptacion_id;
 
@@ -657,10 +668,9 @@
                         estado: 'aprobado'
                     })
                 });
-                if (res.ok) {
-                    alert('Recurso aprobado y guardado.');
-                    cargarHistorial();
-                }
+                await leerJson(res);
+                alert('Recurso aprobado y guardado.');
+                cargarHistorial();
             } catch (e) {
                 alert('Error al guardar: ' + e.message);
             }
@@ -681,8 +691,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ texto: nuevoTexto })
                 });
-                const data = await res.json();
-                if (res.ok && data.audio_mp3_url) {
+                const data = await leerJson(res);
+                if (data.audio_mp3_url) {
                     const playerAudio = document.getElementById('playerAudio');
                     const linkAudio = document.getElementById('linkDescargarAudio');
                     playerAudio.src = data.audio_mp3_url;
@@ -726,7 +736,7 @@
 
             try {
                 const resp = await fetch('/api/historial');
-                const data = await resp.json();
+                const data = await leerJson(resp);
                 const lista = data.historial || [];
 
                 contenedor.innerHTML = '';
