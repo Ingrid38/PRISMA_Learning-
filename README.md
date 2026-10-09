@@ -86,8 +86,8 @@ PRISMA_LEARNING/
 
 ### 1. Clonar el repositorio
 ```bash
-git clone https://github.com/TU_USUARIO/PRISMA_LEARNING.git
-cd PRISMA_LEARNING
+git clone https://github.com/Ingrid38/PRISMA_Learning-.git
+cd PRISMA_Learning-
 ```
 
 ### 2. Crear y activar entorno virtual

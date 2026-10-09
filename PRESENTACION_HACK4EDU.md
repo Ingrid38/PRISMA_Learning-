@@ -62,6 +62,6 @@
   * *[Nombre del Integrante 2]* — Rol / Especialidad (ej. Pedagogía DUA & Frontend Accesible).
   * *[Nombre del Integrante 3 / Tutor]* — Mentoría Pedagógica y Metodología.
 * **Repositorio y Recursos Abiertos:**
-  * GitHub: *[Enlace al repositorio público]*
+  * GitHub: https://github.com/Ingrid38/PRISMA_Learning-
   * Despliegue en la nube: *[Enlace a Render.com]*
   * Licencia: MIT Open Source.
