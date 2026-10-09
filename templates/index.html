@@ -4,367 +4,560 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PRISMA — Motor de Refracción Pedagógica DUA | #hack4edu 2026</title>
-    <!-- Tailwind CSS CDN para una interfaz limpia y moderna -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --ink: #0f172a;
+            --muted: #475569;
+            --accent: #3346d3;
+        }
         body {
-            font-family: 'Outfit', sans-serif;
-            background: linear-gradient(135deg, #0b132b 0%, #1c2541 100%);
+            font-family: 'Inter', system-ui, sans-serif;
+            color: var(--ink);
             min-height: 100vh;
+            background: #e9eef6;
+            -webkit-font-smoothing: antialiased;
         }
         .font-accessible {
             font-family: 'Atkinson Hyperlegible', sans-serif;
-            line-height: 1.7;
-            letter-spacing: 0.02em;
+            line-height: 1.75;
+            letter-spacing: 0.015em;
         }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.06);
-            backdrop-filter: blur(14px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+
+        /* Fondo con orbes de color difuminados (necesario para que el vidrio refracte) */
+        .backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            overflow: hidden;
+            background: radial-gradient(120% 80% at 50% 0%, #f5f8fd 0%, #e6ecf5 60%, #dfe6f1 100%);
         }
-        .pulse-rainbow {
-            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
-            background-size: 300% 300%;
-            animation: gradientAnim 6s ease infinite;
+        .orb {
+            position: absolute;
+            border-radius: 9999px;
+            filter: blur(70px);
+            opacity: .55;
+            animation: float 22s ease-in-out infinite;
         }
-        @keyframes gradientAnim {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+        .orb-1 { width: 520px; height: 520px; background: #8fb4ff; top: -140px; left: -120px; }
+        .orb-2 { width: 460px; height: 460px; background: #b9a6ff; top: 25%; right: -140px; animation-delay: -7s; }
+        .orb-3 { width: 420px; height: 420px; background: #7fe0d6; bottom: -160px; left: 30%; animation-delay: -14s; }
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(40px, -30px) scale(1.05); }
+            66% { transform: translate(-30px, 25px) scale(.97); }
         }
-        audio::-webkit-media-controls-panel {
-            background-color: #1e293b;
+
+        /* Liquid glass */
+        .glass {
+            position: relative;
+            isolation: isolate;
+            background: linear-gradient(145deg, rgba(255,255,255,.62) 0%, rgba(255,255,255,.34) 100%);
+            backdrop-filter: blur(26px) saturate(180%);
+            -webkit-backdrop-filter: blur(26px) saturate(180%);
+            border: 1px solid rgba(255,255,255,.7);
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,.9),
+                inset 0 -1px 0 rgba(255,255,255,.3),
+                0 1px 2px rgba(15,23,42,.04),
+                0 24px 48px -24px rgba(30,41,90,.22);
         }
-        audio::-webkit-media-controls-current-time-display,
-        audio::-webkit-media-controls-time-remaining-display {
-            color: #38bdf8;
+        .glass::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            border-radius: inherit;
+            pointer-events: none;
+            background:
+                radial-gradient(120% 60% at 0% 0%, rgba(255,255,255,.65) 0%, rgba(255,255,255,0) 55%),
+                radial-gradient(80% 50% at 100% 100%, rgba(255,255,255,.25) 0%, rgba(255,255,255,0) 60%);
         }
+        .glass-soft {
+            background: rgba(255,255,255,.45);
+            border: 1px solid rgba(255,255,255,.75);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.85);
+        }
+        .glass-nav {
+            background: rgba(255,255,255,.55);
+            backdrop-filter: blur(22px) saturate(180%);
+            -webkit-backdrop-filter: blur(22px) saturate(180%);
+            border: 1px solid rgba(255,255,255,.75);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 10px 30px -18px rgba(30,41,90,.3);
+        }
+
+        .field {
+            width: 100%;
+            background: rgba(255,255,255,.6);
+            border: 1px solid rgba(148,163,184,.35);
+            border-radius: 14px;
+            color: var(--ink);
+            box-shadow: inset 0 1px 2px rgba(15,23,42,.04);
+            transition: border-color .2s, box-shadow .2s, background .2s;
+        }
+        .field::placeholder { color: #94a3b8; }
+        .field:focus {
+            outline: none;
+            background: rgba(255,255,255,.85);
+            border-color: rgba(51,70,211,.55);
+            box-shadow: 0 0 0 4px rgba(51,70,211,.12);
+        }
+
+        .btn-primary {
+            background: linear-gradient(180deg, #4255e6 0%, #2c3cc4 100%);
+            color: #fff;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 10px 24px -10px rgba(44,60,196,.65);
+            transition: transform .15s, box-shadow .2s, filter .2s;
+        }
+        .btn-primary:hover { filter: brightness(1.06); box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 14px 28px -10px rgba(44,60,196,.7); }
+        .btn-primary:active { transform: translateY(1px); }
+        .btn-primary:disabled { filter: grayscale(.4) brightness(.95); cursor: wait; }
+
+        .btn-glass {
+            background: rgba(255,255,255,.6);
+            border: 1px solid rgba(255,255,255,.85);
+            color: #1e293b;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.95), 0 4px 12px -6px rgba(30,41,90,.25);
+            transition: background .2s, transform .15s;
+        }
+        .btn-glass:hover { background: rgba(255,255,255,.85); }
+        .btn-glass:active { transform: translateY(1px); }
+
+        .eyebrow {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: #64748b;
+        }
+        .step {
+            width: 26px; height: 26px;
+            border-radius: 9999px;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 600;
+            color: var(--accent);
+            background: rgba(51,70,211,.1);
+            border: 1px solid rgba(51,70,211,.2);
+        }
+        .icon-tile {
+            width: 36px; height: 36px;
+            border-radius: 11px;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,.7);
+            border: 1px solid rgba(255,255,255,.9);
+            box-shadow: inset 0 1px 0 #fff, 0 4px 10px -6px rgba(30,41,90,.3);
+        }
+        .scroll-thin::-webkit-scrollbar { width: 6px; }
+        .scroll-thin::-webkit-scrollbar-thumb { background: rgba(100,116,139,.3); border-radius: 9999px; }
+        audio { height: 40px; }
     </style>
 </head>
-<body class="text-slate-100 p-4 md:p-8">
+<body class="pb-10">
 
-    <!-- Encabezado Principal -->
-    <header class="max-w-6xl mx-auto mb-8 flex flex-col md:flex-row items-center justify-between gap-4 border-b border-slate-700/60 pb-6">
-        <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-xl pulse-rainbow flex items-center justify-center shadow-lg shadow-cyan-500/20 font-bold text-2xl text-slate-900">
-                P
+    <div class="backdrop" aria-hidden="true">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <!-- Barra superior -->
+    <header class="sticky top-0 z-30 px-4 md:px-8 pt-4">
+        <nav class="glass-nav max-w-6xl mx-auto rounded-2xl px-4 md:px-6 py-3 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white font-semibold"
+                     style="background: linear-gradient(135deg,#4255e6,#7c5cf0 55%,#2bb8c9); box-shadow: inset 0 1px 0 rgba(255,255,255,.4);">
+                    P
+                </div>
+                <div class="leading-tight">
+                    <span class="block font-semibold tracking-tight text-slate-900">PRISMA</span>
+                    <span class="block text-[11px] text-slate-500">Refracción Pedagógica DUA</span>
+                </div>
             </div>
-            <div>
-                <h1 class="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-teal-300 to-indigo-300">
-                    PRISMA
-                </h1>
-                <p class="text-sm text-slate-400">Motor de Refracción Pedagógica DUA · Reto 03 ProFuturo</p>
+            <div class="hidden md:flex items-center gap-1 text-sm text-slate-600">
+                <a href="#nuevo" class="px-3 py-1.5 rounded-lg hover:bg-white/60 transition">Nuevo recurso</a>
+                <a href="#biblioteca" class="px-3 py-1.5 rounded-lg hover:bg-white/60 transition">Biblioteca</a>
             </div>
-        </div>
-        <div class="flex items-center gap-3">
-            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                Supabase & Render Conectados
-            </span>
-            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                #hack4edu 2026
-            </span>
-        </div>
+            <div class="flex items-center gap-2">
+                <span class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium text-emerald-700 bg-emerald-50/70 border border-emerald-200/80">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    Servicios conectados
+                </span>
+                <span class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-medium text-slate-600 glass-soft">#hack4edu 2026</span>
+            </div>
+        </nav>
     </header>
 
-    <main class="max-w-6xl mx-auto space-y-8">
+    <main class="max-w-6xl mx-auto px-4 md:px-8 mt-10 space-y-10">
 
-        <!-- Formulario de Ingesta Multiformato -->
-        <section class="glass-card rounded-2xl p-6 md:p-8 shadow-2xl">
-            <h2 class="text-xl font-semibold text-white mb-2 flex items-center gap-2">
-                <span>📂</span> Ingesta de Recurso Educativo Convencional
-            </h2>
-            <p class="text-slate-300 text-sm mb-6">
-                Sube cualquier material del aula: un fragmento de texto escolar, una ficha en PDF, una presentación PPTX o la foto de una pizarra/infografía.
+        <!-- Encabezado -->
+        <section class="text-center max-w-2xl mx-auto">
+            <span class="eyebrow">Reto 03 · ProFuturo</span>
+            <h1 class="mt-3 text-3xl md:text-4xl font-semibold tracking-tight text-slate-900">
+                Un contenido, muchas formas de aprender
+            </h1>
+            <p class="mt-3 text-slate-600 text-[15px] leading-relaxed">
+                Convierte material escolar convencional en lectura fácil, audio narrado, glosario,
+                ilustración y ficha imprimible, siguiendo los principios del Diseño Universal para el Aprendizaje.
             </p>
+        </section>
 
-            <form id="formAdaptar" class="space-y-6">
-                <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-2">Título de la actividad o clase</label>
-                    <input type="text" id="titulo" name="titulo" placeholder="Ej: La Fotosíntesis y la Nutrición Celular" 
-                           class="w-full bg-slate-900/60 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition">
-                </div>
+        <!-- Formulario de ingesta -->
+        <section id="nuevo" class="glass rounded-3xl p-6 md:p-8 scroll-mt-28">
+            <form id="formAdaptar" class="space-y-8">
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Opción 1: Archivo -->
-                    <div class="border-2 border-dashed border-slate-700 hover:border-cyan-500/60 rounded-xl p-5 flex flex-col items-center justify-center text-center transition bg-slate-900/40">
-                        <svg class="w-10 h-10 text-cyan-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                        </svg>
-                        <p class="text-sm font-semibold text-slate-200 mb-1">Subir archivo (PDF, PPTX, JPG, PNG)</p>
-                        <p class="text-xs text-slate-400 mb-3">Máximo 30MB</p>
-                        <input type="file" id="archivo" name="archivo" accept=".pdf,.ppt,.pptx,.jpg,.jpeg,.png,.webp,.txt"
-                               class="text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-cyan-600 file:text-white hover:file:bg-cyan-500 cursor-pointer">
+                <!-- Paso 1 -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3">
+                        <span class="step">1</span>
+                        <div>
+                            <h2 class="font-semibold text-slate-900">Material de origen</h2>
+                            <p class="text-xs text-slate-500">Texto, ficha PDF, presentación PPTX o foto de pizarra.</p>
+                        </div>
                     </div>
 
-                    <!-- Opción 2: Texto Directo -->
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">O pega aquí el texto original:</label>
-                        <textarea id="textoDirecto" name="texto" rows="5" placeholder="Pega aquí el contenido denso del libro o guía escolar..."
-                                  class="w-full bg-slate-900/60 border border-slate-700 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition"></textarea>
+                        <label for="titulo" class="block text-xs font-medium text-slate-600 mb-1.5">Título de la actividad o clase</label>
+                        <input type="text" id="titulo" name="titulo" placeholder="Ej: La fotosíntesis y la nutrición celular"
+                               class="field px-4 py-3 text-sm">
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label for="archivo" class="glass-soft rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer border-dashed hover:bg-white/70 transition min-h-[168px]">
+                            <span class="icon-tile mb-3">
+                                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+                                </svg>
+                            </span>
+                            <span class="text-sm font-medium text-slate-800">Selecciona un archivo</span>
+                            <span class="text-xs text-slate-500 mt-1">PDF, PPTX, JPG, PNG o TXT · máximo 30 MB</span>
+                            <span id="nombreArchivo" class="hidden mt-3 text-xs font-medium text-indigo-700 bg-indigo-50/80 border border-indigo-200/70 px-2.5 py-1 rounded-full max-w-full truncate"></span>
+                            <input type="file" id="archivo" name="archivo" accept=".pdf,.ppt,.pptx,.jpg,.jpeg,.png,.webp,.txt" class="sr-only">
+                        </label>
+
+                        <div class="flex flex-col">
+                            <label for="textoDirecto" class="block text-xs font-medium text-slate-600 mb-1.5">O pega el texto original</label>
+                            <textarea id="textoDirecto" name="texto" rows="6" placeholder="Pega aquí el contenido del libro o guía escolar..."
+                                      class="field p-3.5 text-sm flex-1 resize-none"></textarea>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Selector de Prioridades Pedagógicas DUA (Opciones Cerradas y Éticas) -->
-                <div class="bg-slate-900/50 rounded-xl p-4 border border-slate-800 space-y-3">
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <label class="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                            <span>🎯</span> Prioridades Pedagógicas DUA observadas en el aula:
-                        </label>
-                        <span class="text-[11px] text-amber-300/90 bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 rounded-full">
-                            🛡️ Marco DUA: Sin diagnósticos clínicos ni etiquetas individuales
+                <div class="h-px bg-gradient-to-r from-transparent via-slate-300/70 to-transparent"></div>
+
+                <!-- Paso 2 -->
+                <div class="space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <span class="step">2</span>
+                            <div>
+                                <h2 class="font-semibold text-slate-900">Prioridades pedagógicas observadas</h2>
+                                <p class="text-xs text-slate-500">Selecciona las barreras de aprendizaje presentes en el grupo.</p>
+                            </div>
+                        </div>
+                        <span class="self-start sm:self-auto text-[11px] text-slate-600 glass-soft px-2.5 py-1 rounded-full">
+                            Sin diagnósticos clínicos ni etiquetas individuales
                         </span>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 text-xs text-slate-300">
-                        <label class="flex items-center gap-2.5 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 hover:border-cyan-500/50 cursor-pointer transition">
-                            <input type="checkbox" name="barreras" value="vocabulario" class="rounded text-cyan-500 focus:ring-cyan-500 bg-slate-900 border-slate-700 w-4 h-4">
-                            <span>Vocabulario abstracto / términos densos</span>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                        <label class="glass-soft rounded-xl px-3.5 py-3 flex items-center gap-3 cursor-pointer text-sm text-slate-700 transition hover:bg-white/70 has-[:checked]:bg-indigo-50/80 has-[:checked]:border-indigo-300 has-[:checked]:text-indigo-900">
+                            <input type="checkbox" name="barreras" value="vocabulario" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                            <span>Vocabulario abstracto o denso</span>
                         </label>
-                        <label class="flex items-center gap-2.5 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 hover:border-cyan-500/50 cursor-pointer transition">
-                            <input type="checkbox" name="barreras" value="atencion" class="rounded text-cyan-500 focus:ring-cyan-500 bg-slate-900 border-slate-700 w-4 h-4">
-                            <span>Fatiga ante textos largos / atención</span>
+                        <label class="glass-soft rounded-xl px-3.5 py-3 flex items-center gap-3 cursor-pointer text-sm text-slate-700 transition hover:bg-white/70 has-[:checked]:bg-indigo-50/80 has-[:checked]:border-indigo-300 has-[:checked]:text-indigo-900">
+                            <input type="checkbox" name="barreras" value="atencion" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                            <span>Fatiga ante textos largos</span>
                         </label>
-                        <label class="flex items-center gap-2.5 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 hover:border-cyan-500/50 cursor-pointer transition">
-                            <input type="checkbox" name="barreras" value="visual" class="rounded text-cyan-500 focus:ring-cyan-500 bg-slate-900 border-slate-700 w-4 h-4">
-                            <span>Baja visión / requiere audiodescripción</span>
+                        <label class="glass-soft rounded-xl px-3.5 py-3 flex items-center gap-3 cursor-pointer text-sm text-slate-700 transition hover:bg-white/70 has-[:checked]:bg-indigo-50/80 has-[:checked]:border-indigo-300 has-[:checked]:text-indigo-900">
+                            <input type="checkbox" name="barreras" value="visual" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                            <span>Baja visión / audiodescripción</span>
                         </label>
-                        <label class="flex items-center gap-2.5 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 hover:border-cyan-500/50 cursor-pointer transition">
-                            <input type="checkbox" name="barreras" value="segunda_lengua" class="rounded text-cyan-500 focus:ring-cyan-500 bg-slate-900 border-slate-700 w-4 h-4">
-                            <span>Segunda lengua / lengua originaria</span>
+                        <label class="glass-soft rounded-xl px-3.5 py-3 flex items-center gap-3 cursor-pointer text-sm text-slate-700 transition hover:bg-white/70 has-[:checked]:bg-indigo-50/80 has-[:checked]:border-indigo-300 has-[:checked]:text-indigo-900">
+                            <input type="checkbox" name="barreras" value="segunda_lengua" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                            <span>Segunda lengua o lengua originaria</span>
                         </label>
-                        <label class="flex items-center gap-2.5 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 hover:border-cyan-500/50 cursor-pointer transition">
-                            <input type="checkbox" name="barreras" value="comprension_lenta" class="rounded text-cyan-500 focus:ring-cyan-500 bg-slate-900 border-slate-700 w-4 h-4">
-                            <span>Ritmo gradual / requiere andamiaje</span>
+                        <label class="glass-soft rounded-xl px-3.5 py-3 flex items-center gap-3 cursor-pointer text-sm text-slate-700 transition hover:bg-white/70 has-[:checked]:bg-indigo-50/80 has-[:checked]:border-indigo-300 has-[:checked]:text-indigo-900">
+                            <input type="checkbox" name="barreras" value="comprension_lenta" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                            <span>Ritmo gradual / andamiaje</span>
                         </label>
                     </div>
                 </div>
 
-                <div class="flex items-center justify-between pt-2">
-                    <span class="text-xs text-slate-400 flex items-center gap-1.5">
-                        <span class="text-amber-400">⚡</span> Gemini Flash Lite · Audio Neuronal · Auditoría Fernández-Huerta
-                    </span>
-                    <button type="submit" id="btnProcesar" 
-                            class="px-8 py-3.5 rounded-xl font-semibold text-slate-950 pulse-rainbow hover:opacity-95 transition shadow-lg shadow-cyan-500/25 flex items-center gap-2 cursor-pointer">
-                        <span id="btnIcon">✨</span>
-                        <span id="btnText">Refractar en Formato Accesible DUA</span>
+                <div class="h-px bg-gradient-to-r from-transparent via-slate-300/70 to-transparent"></div>
+
+                <!-- Paso 3 -->
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <span class="step">3</span>
+                        <div>
+                            <h2 class="font-semibold text-slate-900">Generar recurso accesible</h2>
+                            <p class="text-xs text-slate-500">Lectura fácil · audio · ilustración · glosario · ficha PDF</p>
+                        </div>
+                    </div>
+                    <button type="submit" id="btnProcesar"
+                            class="btn-primary px-7 py-3.5 rounded-2xl font-medium text-sm flex items-center justify-center gap-2 cursor-pointer">
+                        <svg id="btnIcon" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
+                        </svg>
+                        <span id="btnText">Adaptar con PRISMA</span>
                     </button>
                 </div>
             </form>
         </section>
 
-        <!-- Indicador de Carga -->
-        <div id="loading" class="hidden text-center py-12 space-y-4">
-            <div class="w-14 h-14 mx-auto rounded-full border-4 border-cyan-500/20 border-t-cyan-400 animate-spin"></div>
-            <p class="text-lg font-semibold text-cyan-300">Refractando contenido hacia el espectro multimodal accesible...</p>
-            <p class="text-xs text-slate-400 max-w-md mx-auto">Generando Lectura Fácil, ilustración del tema, audio MP3, glosario y ficha imprimible.</p>
+        <!-- Indicador de carga -->
+        <div id="loading" class="hidden glass rounded-3xl p-10 text-center space-y-4">
+            <div class="w-12 h-12 mx-auto rounded-full border-[3px] border-indigo-200 border-t-indigo-600 animate-spin"></div>
+            <p class="font-medium text-slate-800">Adaptando el contenido…</p>
+            <p class="text-xs text-slate-500 max-w-md mx-auto">Generando lectura fácil, ilustración del tema, audio MP3, glosario y ficha imprimible. Puede tardar unos segundos.</p>
         </div>
 
-        <!-- Panel de Resultados (Comparativa y Espectro DUA) -->
-        <section id="resultados" class="hidden space-y-6">
+        <!-- Resultados -->
+        <section id="resultados" class="hidden space-y-6 scroll-mt-28">
 
-            <!-- Banner Métrico: Salto de Legibilidad y Acciones Globales -->
-            <div class="glass-card rounded-2xl p-6 border border-cyan-500/30 bg-gradient-to-r from-slate-900/80 via-slate-900/60 to-slate-900/80">
-                <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div>
-                        <span class="text-xs font-semibold text-cyan-400 uppercase tracking-wider">Auditoría Cuantitativa DUA</span>
-                        <h3 class="text-2xl font-bold text-white mt-1" id="resTitulo">Título del Recurso</h3>
-                        <p class="text-sm text-slate-400" id="resFormatoOrigen">Formato origen: Texto</p>
+            <!-- Resumen -->
+            <div class="glass rounded-3xl p-6 md:p-7">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    <div class="min-w-0">
+                        <span class="eyebrow">Resultado de la adaptación</span>
+                        <h3 class="text-2xl font-semibold tracking-tight text-slate-900 mt-1.5" id="resTitulo">Título del recurso</h3>
+                        <p class="text-sm text-slate-500 mt-1" id="resFormatoOrigen">Formato de origen: Texto</p>
                     </div>
 
-                    <!-- Métrica Fernández-Huerta -->
-                    <div class="flex items-center gap-4 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-                        <div class="text-center px-4">
-                            <span class="block text-xs text-slate-400">Original</span>
-                            <span class="text-2xl font-bold text-rose-400" id="scoreOriginal">--</span>
-                            <span class="block text-[10px] text-slate-500">Fernández-Huerta</span>
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                        <div class="glass-soft rounded-2xl px-5 py-3 flex items-center gap-5">
+                            <div class="text-center">
+                                <span class="block text-[11px] text-slate-500">Original</span>
+                                <span class="block text-2xl font-semibold text-rose-600 tabular-nums" id="scoreOriginal">--</span>
+                            </div>
+                            <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
+                            </svg>
+                            <div class="text-center">
+                                <span class="block text-[11px] text-emerald-700 font-medium">Lectura fácil</span>
+                                <span class="block text-2xl font-semibold text-emerald-600 tabular-nums" id="scoreAdaptado">--</span>
+                            </div>
+                            <span class="hidden sm:block text-[10px] text-slate-400 leading-tight w-16">Índice Fernández‑Huerta</span>
                         </div>
-                        <span class="text-2xl text-slate-600">➔</span>
-                        <div class="text-center px-4">
-                            <span class="block text-xs text-emerald-400 font-semibold">Lectura Fácil</span>
-                            <span class="text-3xl font-black text-emerald-300" id="scoreAdaptado">--</span>
-                            <span class="block text-[10px] text-emerald-400">DUA Aprobado</span>
-                        </div>
-                    </div>
 
-                    <!-- Botón Descargar Ficha PDF Imprimible -->
-                    <div>
                         <a id="btnDescargarPdf" href="#" target="_blank"
-                           class="px-5 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-semibold text-sm transition shadow-lg shadow-sky-500/20 flex items-center gap-2 cursor-pointer text-center justify-center">
-                            <span>📥</span>
-                            <span>Descargar Ficha PDF para Imprimir</span>
+                           class="btn-primary px-5 py-3 rounded-2xl text-sm font-medium flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                            </svg>
+                            Ficha PDF imprimible
                         </a>
-                        <p class="text-[11px] text-slate-400 text-center mt-1.5">Optimizado para bajo coste de tinta</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Módulo Multimodal: Audio Narrado Accesible -->
-            <div class="glass-card rounded-2xl p-6 border border-sky-500/30 bg-slate-900/60 space-y-4">
-                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
-                    <div>
-                        <h4 class="font-semibold text-sky-300 flex items-center gap-2">
-                            <span>🎧</span> Audio Narrado Accesible (Text-to-Speech Neuronal)
-                        </h4>
-                        <p class="text-xs text-slate-400 mt-0.5">Para estudiantes con discapacidad visual, baja visión o dificultades severas de decodificación.</p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <a id="linkDescargarAudio" href="#" download="audio_accesible.mp3" target="_blank"
-                           class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 text-xs font-medium border border-slate-700 transition flex items-center gap-1.5">
-                            <span>⬇️</span> Descargar MP3
-                        </a>
-                        <button id="btnRegenerarAudio" class="px-3.5 py-1.5 rounded-lg bg-sky-600/30 hover:bg-sky-600/50 text-sky-200 text-xs font-medium border border-sky-500/40 transition flex items-center gap-1.5">
-                            <span id="iconRegenerarAudio">🔄</span> Actualizar Audio
-                        </button>
-                    </div>
-                </div>
-
-                <div class="w-full pt-1">
-                    <audio id="playerAudio" controls class="w-full rounded-lg outline-none">
-                        Tu navegador no soporta el reproductor de audio HTML5.
-                    </audio>
-                </div>
-            </div>
-
-            <!-- Ilustración referencial del tema -->
-            <div id="bloqueImagen" class="hidden glass-card rounded-2xl p-6 border border-violet-500/30 bg-slate-900/60 space-y-4">
-                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <div>
-                        <h4 class="font-semibold text-violet-300 flex items-center gap-2">
-                            <span>🖼️</span> Ilustración referencial del tema
-                        </h4>
-                        <p class="text-xs text-slate-400 mt-0.5">Apoyo visual generado para el aula. No sustituye un diagrama científico oficial.</p>
-                    </div>
-                    <a id="linkDescargarImagen" href="#" download="ilustracion_tema.jpg" target="_blank"
-                       class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-violet-300 text-xs font-medium border border-slate-700 transition">
-                        Descargar imagen
-                    </a>
-                </div>
-                <img id="imgReferencial" alt="Ilustración referencial del tema" class="w-full max-h-[420px] object-contain rounded-xl bg-white">
-            </div>
-
-            <!-- Vista Comparativa Lado a Lado -->
+            <!-- Comparativa -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Columna Izquierda: Original -->
-                <div class="glass-card rounded-2xl p-6 space-y-4">
-                    <div class="flex items-center justify-between border-b border-slate-700/60 pb-3">
-                        <h4 class="font-semibold text-slate-300 flex items-center gap-2">
-                            <span>📄</span> Contenido Original Ingestado
-                        </h4>
-                        <span id="badgeOriginal" class="text-xs px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40">
-                            Dificultad Elevada
+                <div class="glass rounded-3xl p-6 flex flex-col">
+                    <div class="flex items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-200/70">
+                        <div class="flex items-center gap-3">
+                            <span class="icon-tile">
+                                <svg class="w-[18px] h-[18px] text-slate-600" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+                                </svg>
+                            </span>
+                            <h4 class="font-semibold text-slate-900">Contenido original</h4>
+                        </div>
+                        <span id="badgeOriginal" class="text-[11px] px-2.5 py-1 rounded-full bg-rose-50/80 text-rose-700 border border-rose-200/80">
+                            Dificultad elevada
                         </span>
                     </div>
-                    <div id="resContenidoOriginal" class="text-sm text-slate-300 max-h-96 overflow-y-auto whitespace-pre-wrap leading-relaxed pr-2">
-                    </div>
+                    <div id="resContenidoOriginal" class="scroll-thin text-sm text-slate-600 max-h-96 overflow-y-auto whitespace-pre-wrap leading-relaxed pr-2"></div>
                 </div>
 
-                <!-- Columna Derecha: Lectura Fácil (Editable - Human-in-the-Loop) -->
-                <div class="glass-card rounded-2xl p-6 space-y-4 border-2 border-emerald-500/30">
-                    <div class="flex items-center justify-between border-b border-slate-700/60 pb-3">
-                        <h4 class="font-semibold text-emerald-300 flex items-center gap-2">
-                            <span>✨</span> Versión Lectura Fácil (Editable)
-                        </h4>
-                        <span id="badgeAdaptado" class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-semibold">
+                <div class="glass rounded-3xl p-6 flex flex-col ring-1 ring-emerald-300/50">
+                    <div class="flex items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-200/70">
+                        <div class="flex items-center gap-3">
+                            <span class="icon-tile">
+                                <svg class="w-[18px] h-[18px] text-emerald-600" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/>
+                                </svg>
+                            </span>
+                            <div>
+                                <h4 class="font-semibold text-slate-900">Lectura fácil</h4>
+                                <p class="text-[11px] text-slate-500">Editable antes de aprobar</p>
+                            </div>
+                        </div>
+                        <span id="badgeAdaptado" class="text-[11px] px-2.5 py-1 rounded-full bg-emerald-50/80 text-emerald-700 border border-emerald-200/80 font-medium">
                             Accesible (DUA)
                         </span>
                     </div>
-                    <textarea id="editorLecturaFacil" rows="12" 
-                              class="w-full bg-slate-950/70 border border-emerald-500/40 rounded-xl p-4 text-slate-100 font-accessible text-base focus:outline-none focus:ring-2 focus:ring-emerald-400 transition leading-relaxed"></textarea>
-                    
-                    <div class="flex items-center justify-between pt-2">
-                        <span class="text-xs text-slate-400">💡 Puedes editar el texto antes de aprobar.</span>
-                        <button id="btnAprobar" class="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm transition shadow-lg shadow-emerald-500/20 flex items-center gap-2">
-                            <span>✓</span> Aprobar y Guardar Versión
+                    <textarea id="editorLecturaFacil" rows="12"
+                              class="field scroll-thin p-4 font-accessible text-[15px] flex-1"></textarea>
+                    <div class="flex justify-end pt-4">
+                        <button id="btnAprobar" class="px-5 py-2.5 rounded-xl text-sm font-medium text-white flex items-center gap-2 transition hover:brightness-105"
+                                style="background: linear-gradient(180deg,#16a37a,#0f8a66); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 10px 22px -12px rgba(15,138,102,.7);">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                            </svg>
+                            Aprobar y guardar
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Glosario y Accesibilidad Visual -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Glosario Contextual -->
-                <div class="glass-card rounded-2xl p-6 space-y-4">
-                    <h4 class="font-semibold text-cyan-300 flex items-center gap-2">
-                        <span>📖</span> Glosario de Apoyo al Aprendizaje
-                    </h4>
-                    <div id="glosarioContenedor" class="space-y-3">
-                        <!-- Chips dinámicos -->
+            <!-- Multimedia -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="flex flex-col gap-6">
+                <div class="glass rounded-3xl p-6 space-y-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <span class="icon-tile">
+                                <svg class="w-[18px] h-[18px] text-sky-600" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"/>
+                                </svg>
+                            </span>
+                            <div>
+                                <h4 class="font-semibold text-slate-900">Audio narrado</h4>
+                                <p class="text-[11px] text-slate-500">Para baja visión o dificultades de decodificación</p>
+                            </div>
+                        </div>
+                    </div>
+                    <audio id="playerAudio" controls class="w-full">
+                        Tu navegador no soporta el reproductor de audio HTML5.
+                    </audio>
+                    <div class="flex flex-wrap gap-2">
+                        <a id="linkDescargarAudio" href="#" download="audio_accesible.mp3" target="_blank"
+                           class="btn-glass px-3.5 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                            Descargar MP3
+                        </a>
+                        <button id="btnRegenerarAudio" class="btn-glass px-3.5 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5">
+                            <svg id="iconRegenerarAudio" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
+                            Actualizar con el texto editado
+                        </button>
                     </div>
                 </div>
 
-                <!-- Descripción Visual / Alt-Text -->
-                <div class="glass-card rounded-2xl p-6 space-y-4">
-                    <h4 class="font-semibold text-indigo-300 flex items-center gap-2">
-                        <span>👁️</span> Descripción Accesible de Imágenes / Esquemas
-                    </h4>
-                    <div id="descVisualContenedor" class="text-sm text-slate-300 font-accessible bg-slate-900/60 p-4 rounded-xl border border-slate-800 leading-relaxed">
+                <div class="glass rounded-3xl p-6 flex gap-4 flex-1">
+                    <span class="icon-tile shrink-0">
+                        <svg class="w-[18px] h-[18px] text-amber-600" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18"/>
+                        </svg>
+                    </span>
+                    <div>
+                        <h4 class="font-semibold text-slate-900 mb-1">Pauta de mediación para el docente</h4>
+                        <p id="pautasDocente" class="text-sm text-slate-700 font-accessible"></p>
                     </div>
+                </div>
+                </div>
+
+                <div id="bloqueImagen" class="hidden glass rounded-3xl p-6 space-y-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <span class="icon-tile">
+                                <svg class="w-[18px] h-[18px] text-violet-600" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/>
+                                </svg>
+                            </span>
+                            <div>
+                                <h4 class="font-semibold text-slate-900">Ilustración del tema</h4>
+                                <p class="text-[11px] text-slate-500">Apoyo visual referencial, no sustituye un diagrama oficial</p>
+                            </div>
+                        </div>
+                        <a id="linkDescargarImagen" href="#" download="ilustracion_tema.jpg" target="_blank"
+                           class="btn-glass shrink-0 px-3 py-2 rounded-xl text-xs font-medium">
+                            Descargar
+                        </a>
+                    </div>
+                    <div class="rounded-2xl overflow-hidden bg-white border border-white shadow-inner">
+                        <img id="imgReferencial" alt="Ilustración referencial del tema" class="w-full max-h-[360px] object-contain">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Glosario y descripción accesible -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                <div class="glass rounded-3xl p-6 space-y-4">
+                    <div class="flex items-center gap-3">
+                        <span class="icon-tile">
+                            <svg class="w-[18px] h-[18px] text-indigo-600" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/>
+                            </svg>
+                        </span>
+                        <h4 class="font-semibold text-slate-900">Glosario de apoyo</h4>
+                    </div>
+                    <div id="glosarioContenedor" class="space-y-2.5"></div>
+                </div>
+
+                <div class="glass rounded-3xl p-6 space-y-4">
+                    <div class="flex items-center gap-3">
+                        <span class="icon-tile">
+                            <svg class="w-[18px] h-[18px] text-teal-600" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                        </span>
+                        <h4 class="font-semibold text-slate-900">Descripción accesible</h4>
+                    </div>
+                    <div id="descVisualContenedor" class="glass-soft rounded-2xl p-4 text-sm text-slate-700 font-accessible"></div>
                     <div id="bloqueAudioDesc" class="hidden space-y-2">
                         <div class="flex items-center justify-between gap-2">
-                            <p class="text-xs text-indigo-300">Escuchar la descripción de la imagen</p>
+                            <p class="text-xs text-slate-600">Escuchar la descripción de la imagen</p>
                             <a id="linkDescargarAudioDesc" href="#" download="audiodescripcion.mp3" target="_blank"
-                               class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300 text-xs font-medium border border-slate-700 transition">
+                               class="btn-glass px-3 py-1.5 rounded-lg text-xs font-medium">
                                 Descargar MP3
                             </a>
                         </div>
-                        <audio id="playerDescVisual" controls class="w-full rounded-lg outline-none">
+                        <audio id="playerDescVisual" controls class="w-full">
                             Tu navegador no soporta el reproductor de audio HTML5.
                         </audio>
                     </div>
                 </div>
             </div>
-
-            <!-- Pautas de Mediación para el Docente -->
-            <div class="glass-card rounded-2xl p-6 bg-gradient-to-r from-amber-500/10 via-slate-900/40 to-slate-900/40 border border-amber-500/30">
-                <h4 class="font-semibold text-amber-300 flex items-center gap-2 mb-2">
-                    <span>🧭</span> Pauta de Mediación Pedagógica DUA
-                </h4>
-                <p id="pautasDocente" class="text-sm text-slate-300 font-accessible leading-relaxed">
-                </p>
-            </div>
-
         </section>
 
-        <!-- Biblioteca de Recursos Adaptados (Historial en Supabase) -->
-        <section class="glass-card rounded-2xl p-6 md:p-8 space-y-5 shadow-2xl border border-slate-700/50">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+        <!-- Biblioteca -->
+        <section id="biblioteca" class="glass rounded-3xl p-6 md:p-8 space-y-6 scroll-mt-28">
+            <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
                 <div>
-                    <h3 class="text-xl font-bold text-white flex items-center gap-2">
-                        <span>📚</span> Biblioteca de Recursos Adaptados
-                    </h3>
-                    <p class="text-xs text-slate-400 mt-1">
-                        Historial de fichas imprimibles y audios sincronizados en Supabase PostgreSQL & Storage.
-                    </p>
+                    <span class="eyebrow">Historial</span>
+                    <h3 class="text-xl font-semibold tracking-tight text-slate-900 mt-1">Biblioteca de recursos adaptados</h3>
+                    <p class="text-xs text-slate-500 mt-1">Fichas, audios e ilustraciones guardados en Supabase.</p>
                 </div>
-                <button id="btnRecargarHistorial" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5 self-start sm:self-auto cursor-pointer">
-                    <span id="iconRecargar">🔄</span> Actualizar Biblioteca
+                <button id="btnRecargarHistorial" class="btn-glass px-3.5 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5 self-start sm:self-auto cursor-pointer">
+                    <svg id="iconRecargar" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
+                    Actualizar
                 </button>
             </div>
 
-            <div id="historialLoading" class="hidden text-center py-8 text-slate-400 text-sm">
-                <div class="w-8 h-8 mx-auto rounded-full border-2 border-cyan-500/20 border-t-cyan-400 animate-spin mb-3"></div>
-                Cargando recursos sincronizados desde Supabase...
+            <div id="historialLoading" class="hidden text-center py-8 text-slate-500 text-sm">
+                <div class="w-8 h-8 mx-auto rounded-full border-2 border-indigo-200 border-t-indigo-600 animate-spin mb-3"></div>
+                Cargando recursos…
             </div>
 
-            <div id="historialVacio" class="hidden text-center py-8 text-slate-400 text-sm bg-slate-900/30 rounded-xl border border-slate-800/80">
-                <span class="text-2xl block mb-2">📂</span>
-                Aún no has generado adaptaciones. Sube tu primer material escolar arriba.
+            <div id="historialVacio" class="hidden text-center py-10 text-slate-500 text-sm glass-soft rounded-2xl">
+                Aún no hay adaptaciones. Sube tu primer material escolar arriba.
             </div>
 
-            <div id="historialContenedor" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
-                <!-- Tarjetas dinámicas inyectadas por JS -->
-            </div>
+            <div id="historialContenedor" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
         </section>
 
     </main>
 
-    <footer class="max-w-6xl mx-auto mt-12 text-center text-xs text-slate-500 border-t border-slate-800 pt-6">
-        PRISMA · Proyecto desarrollado para el Reto 03 ProFuturo (#hack4edu 2026) · Código Abierto (MIT)
+    <footer class="max-w-6xl mx-auto px-4 md:px-8 mt-10 text-center text-xs text-slate-500">
+        PRISMA · Reto 03 ProFuturo (#hack4edu 2026) · Código abierto (MIT)
     </footer>
 
     <script>
         let adaptacionActualId = null;
+
+        document.getElementById('archivo').addEventListener('change', (e) => {
+            const etiqueta = document.getElementById('nombreArchivo');
+            const archivo = e.target.files[0];
+            if (archivo) {
+                etiqueta.textContent = archivo.name;
+                etiqueta.classList.remove('hidden');
+            } else {
+                etiqueta.classList.add('hidden');
+            }
+        });
 
         document.getElementById('formAdaptar').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -391,7 +584,6 @@
 
                 adaptacionActualId = data.adaptacion_id;
 
-                // Renderizar métricas
                 document.getElementById('resTitulo').textContent = data.titulo;
                 document.getElementById('resFormatoOrigen').textContent = `Formato de origen: ${data.formato_origen.toUpperCase()}`;
                 document.getElementById('scoreOriginal').textContent = data.legibilidad_original.score;
@@ -399,15 +591,11 @@
                 document.getElementById('badgeOriginal').textContent = data.legibilidad_original.nivel;
                 document.getElementById('badgeAdaptado').textContent = data.legibilidad_adaptada.nivel;
 
-                // Renderizar textos
                 document.getElementById('resContenidoOriginal').textContent = data.contenido_original || '(Archivo procesado visualmente)';
                 document.getElementById('editorLecturaFacil').value = data.lectura_facil;
 
-                // Configurar enlace de Descargar PDF
-                const btnPdf = document.getElementById('btnDescargarPdf');
-                btnPdf.href = `/api/descargar-pdf/${adaptacionActualId}`;
+                document.getElementById('btnDescargarPdf').href = `/api/descargar-pdf/${adaptacionActualId}`;
 
-                // Configurar reproductor de audio
                 const playerAudio = document.getElementById('playerAudio');
                 const linkAudio = document.getElementById('linkDescargarAudio');
                 if (data.audio_mp3_url) {
@@ -427,21 +615,19 @@
                     bloqueImagen.classList.add('hidden');
                 }
 
-                // Renderizar glosario
                 const glosarioDiv = document.getElementById('glosarioContenedor');
                 glosarioDiv.innerHTML = '';
                 if (data.glosario && data.glosario.length > 0) {
                     data.glosario.forEach(item => {
                         const card = document.createElement('div');
-                        card.className = 'p-3 rounded-xl bg-slate-900/60 border border-slate-800';
-                        card.innerHTML = `<span class="font-bold text-cyan-300">${item.termino}:</span> <span class="text-slate-300 text-sm">${item.significado_simple}</span>`;
+                        card.className = 'glass-soft rounded-xl px-4 py-3 text-sm';
+                        card.innerHTML = `<span class="font-semibold text-indigo-700">${item.termino}</span><span class="text-slate-400 mx-1.5">·</span><span class="text-slate-700">${item.significado_simple}</span>`;
                         glosarioDiv.appendChild(card);
                     });
                 } else {
                     glosarioDiv.innerHTML = '<p class="text-xs text-slate-500">No se requirieron definiciones adicionales.</p>';
                 }
 
-                // Renderizar descripción visual, su audiodescripción y las pautas
                 document.getElementById('descVisualContenedor').textContent = data.descripcion_visual || 'Contenido adaptado sin elementos visuales adicionales.';
                 configurarAudioDescripcion(data.incluye_audiodescripcion, data.audio_mp3_url);
                 document.getElementById('pautasDocente').textContent = data.pautas_docente || 'Fomentar la lectura compartida y verificar la comprensión con preguntas breves.';
@@ -454,11 +640,10 @@
             } finally {
                 btn.disabled = false;
                 loading.classList.add('hidden');
-                cargarHistorial(); // Actualizar lista tras nuevo recurso
+                cargarHistorial();
             }
         });
 
-        // Botón Aprobar (Human-in-the-loop)
         document.getElementById('btnAprobar').addEventListener('click', async () => {
             if (!adaptacionActualId) return;
             const nuevoTexto = document.getElementById('editorLecturaFacil').value;
@@ -473,7 +658,7 @@
                     })
                 });
                 if (res.ok) {
-                    alert('✓ ¡Recurso aprobado y sincronizado con Supabase!');
+                    alert('Recurso aprobado y guardado.');
                     cargarHistorial();
                 }
             } catch (e) {
@@ -481,7 +666,6 @@
             }
         });
 
-        // Botón Regenerar Audio con Cambios
         document.getElementById('btnRegenerarAudio').addEventListener('click', async () => {
             if (!adaptacionActualId) return;
             const nuevoTexto = document.getElementById('editorLecturaFacil').value;
@@ -505,7 +689,6 @@
                     linkAudio.href = data.audio_mp3_url;
                     configurarAudioDescripcion(data.incluye_audiodescripcion, data.audio_mp3_url);
                     playerAudio.play();
-                    alert('✓ ¡Audio regenerado con éxito!');
                     cargarHistorial();
                 } else {
                     alert('Error: ' + (data.error || 'No se pudo generar el audio'));
@@ -533,7 +716,6 @@
             }
         }
 
-        // Cargar Historial de Recursos desde Supabase
         async function cargarHistorial() {
             const loading = document.getElementById('historialLoading');
             const vacio = document.getElementById('historialVacio');
@@ -553,42 +735,36 @@
                 } else {
                     lista.forEach(item => {
                         const card = document.createElement('div');
-                        card.className = 'glass-card rounded-xl p-4 flex flex-col justify-between border border-slate-800 hover:border-cyan-500/40 transition space-y-3';
+                        card.className = 'glass-soft rounded-2xl p-4 flex flex-col justify-between gap-4 transition hover:bg-white/70';
 
                         const fechaStr = item.fecha ? new Date(item.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
-                        const badgeEstado = item.estado === 'aprobado' 
-                            ? '<span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-semibold">✓ Aprobado</span>'
-                            : '<span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">Borrador</span>';
+                        const badgeEstado = item.estado === 'aprobado'
+                            ? '<span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">Aprobado</span>'
+                            : '<span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Borrador</span>';
 
                         const audioBtn = item.audio_mp3_url
-                            ? `<a href="${item.audio_mp3_url}" target="_blank" download class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 text-xs font-medium border border-slate-700 transition flex items-center gap-1">
-                                 <span>🎧</span> Audio
-                               </a>`
+                            ? `<a href="${item.audio_mp3_url}" target="_blank" download class="btn-glass px-2.5 py-1.5 rounded-lg text-xs font-medium">Audio</a>`
                             : '';
                         const imagenBtn = item.imagen_url
-                            ? `<a href="${item.imagen_url}" target="_blank" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-violet-300 text-xs font-medium border border-slate-700 transition flex items-center gap-1">
-                                 <span>🖼️</span> Imagen
-                               </a>`
+                            ? `<a href="${item.imagen_url}" target="_blank" class="btn-glass px-2.5 py-1.5 rounded-lg text-xs font-medium">Imagen</a>`
                             : '';
 
                         card.innerHTML = `
                             <div>
-                                <div class="flex items-center justify-between gap-2 mb-1.5">
-                                    <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-800 text-cyan-300 border border-slate-700">${item.formato}</span>
-                                    <div class="flex items-center gap-1.5">${badgeEstado} <span class="text-[10px] text-slate-500">${fechaStr}</span></div>
+                                <div class="flex items-center justify-between gap-2 mb-2">
+                                    <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">${item.formato}</span>
+                                    <div class="flex items-center gap-1.5">${badgeEstado}</div>
                                 </div>
-                                <h4 class="font-bold text-slate-100 text-sm line-clamp-2 leading-snug">${item.titulo}</h4>
-                                <div class="flex items-center gap-2 mt-2 text-xs">
-                                    <span class="text-rose-400 font-semibold">${item.score_original != null ? item.score_original : '--'}</span>
-                                    <span class="text-slate-600">➔</span>
-                                    <span class="text-emerald-300 font-bold bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-800/40">${item.score_adaptado != null ? item.score_adaptado : '--'}</span>
-                                    <span class="text-[10px] text-slate-400">Fernández-Huerta</span>
+                                <h4 class="font-medium text-slate-900 text-sm line-clamp-2 leading-snug">${item.titulo}</h4>
+                                <div class="flex items-center gap-2 mt-2.5 text-xs tabular-nums">
+                                    <span class="text-rose-600 font-medium">${item.score_original != null ? item.score_original : '--'}</span>
+                                    <span class="text-slate-400">→</span>
+                                    <span class="text-emerald-600 font-semibold">${item.score_adaptado != null ? item.score_adaptado : '--'}</span>
+                                    <span class="text-[10px] text-slate-400 ml-auto">${fechaStr}</span>
                                 </div>
                             </div>
-                            <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-800/80">
-                                <a href="${item.pdf_url}" target="_blank" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition flex items-center gap-1.5 shadow-sm shadow-sky-500/20">
-                                    <span>📥</span> Ficha PDF
-                                </a>
+                            <div class="flex items-center gap-2 pt-3 border-t border-slate-200/70">
+                                <a href="${item.pdf_url}" target="_blank" class="btn-primary px-3 py-1.5 rounded-lg text-xs font-medium">Ficha PDF</a>
                                 ${audioBtn}
                                 ${imagenBtn}
                             </div>
@@ -604,8 +780,6 @@
         }
 
         document.getElementById('btnRecargarHistorial').addEventListener('click', cargarHistorial);
-
-        // Cargar historial al iniciar
         document.addEventListener('DOMContentLoaded', cargarHistorial);
     </script>
 </body>
