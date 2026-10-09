@@ -29,6 +29,9 @@ CREATE TABLE IF NOT EXISTS adaptaciones_multimodales (
     
     -- Salida 2: Accesibilidad Auditiva (Audio)
     audio_mp3_url TEXT,
+
+    -- Salida 2b: Ilustración referencial del tema (Cloudflare Workers AI)
+    imagen_referencial_url TEXT,
     
     -- Salida 3: Accesibilidad Visual (Alt-Text pedagógico)
     descripcion_visual TEXT,

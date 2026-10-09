@@ -8,6 +8,7 @@ from legibilidad import calcular_legibilidad
 from ai_service import adaptar_recurso_dua
 from parser_service import extraer_texto_pdf, extraer_texto_pptx, preparar_imagen_base64
 from audio_service import construir_texto_audio, generar_audio_mp3
+from image_service import generar_imagen_referencial
 from pdf_service import generar_ficha_pdf
 
 load_dotenv()
@@ -164,6 +165,19 @@ def adaptar_recurso():
         except Exception as e:
             print(f"[Aviso Audio TTS] No se pudo subir audio a Supabase Storage: {e}")
 
+        # 6b. Ilustración referencial del tema (Cloudflare Workers AI)
+        imagen_url = None
+        try:
+            imagen_bytes = generar_imagen_referencial(titulo_final, texto_adaptado)
+            imagen_url = db.upload_file(
+                bucket="accesibles",
+                path=f"imagenes/ref_{adapt_id}.jpg",
+                file_bytes=imagen_bytes,
+                content_type="image/jpeg",
+            )
+        except Exception as e:
+            print(f"[Aviso Imagen] No se pudo generar la ilustración: {e}")
+
         # 7. Guardar en Supabase (recursos_origen y adaptaciones_multimodales)
         rec_id = str(uuid.uuid4())
         try:
@@ -176,7 +190,7 @@ def adaptar_recurso():
                 "legibilidad_original": metricas_orig.get("score", 0.0)
             })
 
-            db.table("adaptaciones_multimodales").insert({
+            adaptacion = {
                 "id": adapt_id,
                 "recurso_id": rec_id,
                 "lectura_facil": texto_adaptado,
@@ -184,9 +198,18 @@ def adaptar_recurso():
                 "glosario": glosario,
                 "descripcion_visual": desc_visual,
                 "audio_mp3_url": audio_mp3_url,
+                "imagen_referencial_url": imagen_url,
                 "estado": "borrador",
                 "notas_docente": resultado_ia.get("pautas_docente", "")
-            })
+            }
+            try:
+                db.table("adaptaciones_multimodales").insert(adaptacion)
+            except Exception as e_col:
+                print(f"[Aviso columna imagen] {e_col}")
+                adaptacion.pop("imagen_referencial_url", None)
+                if imagen_url:
+                    adaptacion["subtitulos_vtt"] = imagen_url
+                db.table("adaptaciones_multimodales").insert(adaptacion)
 
             # Registrar de forma ética y anónima las barreras pedagógicas observadas
             if barreras_dua:
@@ -215,6 +238,7 @@ def adaptar_recurso():
             "glosario": glosario,
             "descripcion_visual": desc_visual,
             "audio_mp3_url": audio_mp3_url,
+            "imagen_url": imagen_url,
             "incluye_audiodescripcion": incluye_audiodescripcion,
             "pautas_docente": resultado_ia.get("pautas_docente", ""),
             "archivo_url": archivo_url
@@ -342,6 +366,9 @@ def historial_recursos():
                 "score_original": rec.get("legibilidad_original"),
                 "score_adaptado": a.get("legibilidad_adaptada"),
                 "audio_mp3_url": a.get("audio_mp3_url"),
+                "imagen_url": a.get("imagen_referencial_url") or (
+                    a.get("subtitulos_vtt") if str(a.get("subtitulos_vtt") or "").startswith("http") else None
+                ),
                 "pdf_url": f"/api/descargar-pdf/{a.get('id')}",
                 "estado": a.get("estado", "borrador"),
                 "fecha": a.get("created_at")

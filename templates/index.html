@@ -157,7 +157,7 @@
         <div id="loading" class="hidden text-center py-12 space-y-4">
             <div class="w-14 h-14 mx-auto rounded-full border-4 border-cyan-500/20 border-t-cyan-400 animate-spin"></div>
             <p class="text-lg font-semibold text-cyan-300">Refractando contenido hacia el espectro multimodal accesible...</p>
-            <p class="text-xs text-slate-400 max-w-md mx-auto">Generando Lectura Fácil, síntesis de audio MP3, glosario contextual y ficha imprimible.</p>
+            <p class="text-xs text-slate-400 max-w-md mx-auto">Generando Lectura Fácil, ilustración del tema, audio MP3, glosario y ficha imprimible.</p>
         </div>
 
         <!-- Panel de Resultados (Comparativa y Espectro DUA) -->
@@ -224,6 +224,23 @@
                         Tu navegador no soporta el reproductor de audio HTML5.
                     </audio>
                 </div>
+            </div>
+
+            <!-- Ilustración referencial del tema -->
+            <div id="bloqueImagen" class="hidden glass-card rounded-2xl p-6 border border-violet-500/30 bg-slate-900/60 space-y-4">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                        <h4 class="font-semibold text-violet-300 flex items-center gap-2">
+                            <span>🖼️</span> Ilustración referencial del tema
+                        </h4>
+                        <p class="text-xs text-slate-400 mt-0.5">Apoyo visual generado para el aula. No sustituye un diagrama científico oficial.</p>
+                    </div>
+                    <a id="linkDescargarImagen" href="#" download="ilustracion_tema.jpg" target="_blank"
+                       class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-violet-300 text-xs font-medium border border-slate-700 transition">
+                        Descargar imagen
+                    </a>
+                </div>
+                <img id="imgReferencial" alt="Ilustración referencial del tema" class="w-full max-h-[420px] object-contain rounded-xl bg-white">
             </div>
 
             <!-- Vista Comparativa Lado a Lado -->
@@ -398,6 +415,18 @@
                     linkAudio.href = data.audio_mp3_url;
                 }
 
+                const bloqueImagen = document.getElementById('bloqueImagen');
+                const imgReferencial = document.getElementById('imgReferencial');
+                const linkImagen = document.getElementById('linkDescargarImagen');
+                if (data.imagen_url) {
+                    imgReferencial.src = data.imagen_url;
+                    imgReferencial.alt = data.descripcion_visual || data.titulo || 'Ilustración del tema';
+                    linkImagen.href = data.imagen_url;
+                    bloqueImagen.classList.remove('hidden');
+                } else {
+                    bloqueImagen.classList.add('hidden');
+                }
+
                 // Renderizar glosario
                 const glosarioDiv = document.getElementById('glosarioContenedor');
                 glosarioDiv.innerHTML = '';
@@ -536,6 +565,11 @@
                                  <span>🎧</span> Audio
                                </a>`
                             : '';
+                        const imagenBtn = item.imagen_url
+                            ? `<a href="${item.imagen_url}" target="_blank" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-violet-300 text-xs font-medium border border-slate-700 transition flex items-center gap-1">
+                                 <span>🖼️</span> Imagen
+                               </a>`
+                            : '';
 
                         card.innerHTML = `
                             <div>
@@ -556,6 +590,7 @@
                                     <span>📥</span> Ficha PDF
                                 </a>
                                 ${audioBtn}
+                                ${imagenBtn}
                             </div>
                         `;
                         contenedor.appendChild(card);
