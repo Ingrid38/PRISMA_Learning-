@@ -283,6 +283,18 @@
                     </h4>
                     <div id="descVisualContenedor" class="text-sm text-slate-300 font-accessible bg-slate-900/60 p-4 rounded-xl border border-slate-800 leading-relaxed">
                     </div>
+                    <div id="bloqueAudioDesc" class="hidden space-y-2">
+                        <div class="flex items-center justify-between gap-2">
+                            <p class="text-xs text-indigo-300">Escuchar la descripción de la imagen</p>
+                            <a id="linkDescargarAudioDesc" href="#" download="audiodescripcion.mp3" target="_blank"
+                               class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300 text-xs font-medium border border-slate-700 transition">
+                                Descargar MP3
+                            </a>
+                        </div>
+                        <audio id="playerDescVisual" controls class="w-full rounded-lg outline-none">
+                            Tu navegador no soporta el reproductor de audio HTML5.
+                        </audio>
+                    </div>
                 </div>
             </div>
 
@@ -400,8 +412,9 @@
                     glosarioDiv.innerHTML = '<p class="text-xs text-slate-500">No se requirieron definiciones adicionales.</p>';
                 }
 
-                // Renderizar descripción visual y pautas
+                // Renderizar descripción visual, su audiodescripción y las pautas
                 document.getElementById('descVisualContenedor').textContent = data.descripcion_visual || 'Contenido adaptado sin elementos visuales adicionales.';
+                configurarAudioDescripcion(data.incluye_audiodescripcion, data.audio_mp3_url);
                 document.getElementById('pautasDocente').textContent = data.pautas_docente || 'Fomentar la lectura compartida y verificar la comprensión con preguntas breves.';
 
                 resultados.classList.remove('hidden');
@@ -461,6 +474,7 @@
                     const linkAudio = document.getElementById('linkDescargarAudio');
                     playerAudio.src = data.audio_mp3_url;
                     linkAudio.href = data.audio_mp3_url;
+                    configurarAudioDescripcion(data.incluye_audiodescripcion, data.audio_mp3_url);
                     playerAudio.play();
                     alert('✓ ¡Audio regenerado con éxito!');
                     cargarHistorial();
@@ -474,6 +488,21 @@
                 icon.classList.remove('animate-spin');
             }
         });
+
+        function configurarAudioDescripcion(incluye, url) {
+            const bloque = document.getElementById('bloqueAudioDesc');
+            const player = document.getElementById('playerDescVisual');
+            const link = document.getElementById('linkDescargarAudioDesc');
+            if (incluye && url) {
+                player.src = url;
+                link.href = url;
+                bloque.classList.remove('hidden');
+            } else {
+                player.removeAttribute('src');
+                link.href = '#';
+                bloque.classList.add('hidden');
+            }
+        }
 
         // Cargar Historial de Recursos desde Supabase
         async function cargarHistorial() {

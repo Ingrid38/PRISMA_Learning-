@@ -7,7 +7,7 @@ from db import db
 from legibilidad import calcular_legibilidad
 from ai_service import adaptar_recurso_dua
 from parser_service import extraer_texto_pdf, extraer_texto_pptx, preparar_imagen_base64
-from audio_service import generar_audio_mp3
+from audio_service import construir_texto_audio, generar_audio_mp3
 from pdf_service import generar_ficha_pdf
 
 load_dotenv()
@@ -148,11 +148,12 @@ def adaptar_recurso():
         # 5. Calcular legibilidad del texto adaptado
         metricas_adapt = calcular_legibilidad(texto_adaptado)
 
-        # 6. Generar Audio MP3 Accesible (Fase 3)
+        # 6. Generar Audio MP3 Accesible (lectura fácil + audiodescripción de la imagen)
         adapt_id = str(uuid.uuid4())
         audio_mp3_url = None
+        texto_audio, incluye_audiodescripcion = construir_texto_audio(texto_adaptado, desc_visual)
         try:
-            audio_bytes = generar_audio_mp3(texto_adaptado)
+            audio_bytes = generar_audio_mp3(texto_audio)
             audio_filename = f"audios/audio_{adapt_id}.mp3"
             audio_mp3_url = db.upload_file(
                 bucket="accesibles",
@@ -214,6 +215,7 @@ def adaptar_recurso():
             "glosario": glosario,
             "descripcion_visual": desc_visual,
             "audio_mp3_url": audio_mp3_url,
+            "incluye_audiodescripcion": incluye_audiodescripcion,
             "pautas_docente": resultado_ia.get("pautas_docente", ""),
             "archivo_url": archivo_url
         }), 200
@@ -228,17 +230,19 @@ def regenerar_audio(id):
     try:
         data = request.get_json() or {}
         texto = data.get("texto", "")
+        descripcion = ""
 
-        if not texto:
-            # Consultar el texto de la base de datos
-            res = db.table("adaptaciones_multimodales").select("lectura_facil").eq("id", id).execute()
-            if res and len(res) > 0:
+        res = db.table("adaptaciones_multimodales").select("lectura_facil, descripcion_visual").eq("id", id).execute()
+        if res and len(res) > 0:
+            if not texto:
                 texto = res[0].get("lectura_facil", "")
+            descripcion = res[0].get("descripcion_visual", "") or ""
 
-        if not texto:
+        texto_audio, incluye_audiodescripcion = construir_texto_audio(texto, descripcion)
+        if not texto_audio:
             return jsonify({"error": "No hay texto para generar el audio"}), 400
 
-        audio_bytes = generar_audio_mp3(texto)
+        audio_bytes = generar_audio_mp3(texto_audio)
         audio_filename = f"audios/audio_{id}_{uuid.uuid4().hex[:4]}.mp3"
         audio_url = db.upload_file(
             bucket="accesibles",
@@ -251,7 +255,8 @@ def regenerar_audio(id):
 
         return jsonify({
             "status": "ok",
-            "audio_mp3_url": audio_url
+            "audio_mp3_url": audio_url,
+            "incluye_audiodescripcion": incluye_audiodescripcion
         }), 200
     except Exception as e:
         print(f"Error al generar audio: {e}")
