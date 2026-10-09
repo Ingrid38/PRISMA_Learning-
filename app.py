@@ -77,6 +77,10 @@ def adaptar_recurso():
             file_bytes = file.read()
             ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
 
+            # Si el docente no especificó título, usar el nombre del archivo
+            if not request.form.get("titulo", "").strip():
+                titulo = filename.rsplit(".", 1)[0].replace("_", " ").replace("-", " ").title()
+
             # Subir archivo origen a Supabase Storage (bucket 'origenes')
             storage_path = f"doc_{uuid.uuid4().hex[:8]}_{filename}"
             try:
@@ -110,12 +114,16 @@ def adaptar_recurso():
         barreras_dua = []
         if request.is_json:
             json_data = request.get_json() or {}
-            titulo = json_data.get("titulo", titulo)
-            contenido_extraido = json_data.get("texto", "")
-            formato = "texto"
+            titulo = json_data.get("titulo") or titulo
+            if not contenido_extraido and not base64_img:
+                contenido_extraido = json_data.get("texto", "")
+                formato = "texto"
             barreras_dua = json_data.get("barreras", [])
         else:
-            contenido_extraido = request.form.get("texto", "")
+            texto_form = (request.form.get("texto") or "").strip()
+            if not contenido_extraido and not base64_img and texto_form:
+                contenido_extraido = texto_form
+                formato = "texto"
             barreras_dua = request.form.getlist("barreras")
 
         if not contenido_extraido and not base64_img:
