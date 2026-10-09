@@ -161,6 +161,7 @@ REGLAS OBLIGATORIAS DE ADAPTACIÓN (Norma Europea de Lectura Fácil / DUA):
 3. Vocabulario claro: Sustituye tecnicismos difíciles por palabras cotidianas sin perder el concepto científico o histórico.
 4. Organización: Divide en párrafos breves con ideas claras.
 5. Inclusión: Respeta el rigor del tema para que el alumno aprenda el mismo objetivo de clase que sus compañeros.
+6. Ilustración Pedagógica: Diseña una descripción visual en inglés para generar una imagen ('prompt_visual_ingles'). Describe únicamente elementos visuales concretos, estilo vectorial infantil/escolar limpio, colores vivos y fondo blanco. Prohíbe explícitamente cualquier tipo de texto o letras escritas en la imagen.
 
 RESPONDE EXCLUSIVAMENTE CON UN OBJETO JSON con esta estructura exacta:
 {{
@@ -172,6 +173,7 @@ RESPONDE EXCLUSIVAMENTE CON UN OBJETO JSON con esta estructura exacta:
         {{"termino": "Palabra clave 2", "significado_simple": "Explicación en una frase sencilla"}}
     ],
     "descripcion_visual": "Descripción pedagógica clara y estructurada de cualquier imagen, esquema o pizarra presente (o texto descriptivo si es solo texto)",
+    "prompt_visual_ingles": "A clean educational vector illustration representing [concrete visual elements of the concept]. Flat minimalist textbook style, bright harmonious colors, isolated on solid white background, strictly no text, no words, no letters, no labels, no writing",
     "pautas_docente": "Breve recomendación DUA para el docente en el aula (ej: usar preguntas guía, andamiaje visual)"
 }}
 

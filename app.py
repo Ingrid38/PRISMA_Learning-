@@ -165,10 +165,15 @@ def adaptar_recurso():
         except Exception as e:
             print(f"[Aviso Audio TTS] No se pudo subir audio a Supabase Storage: {e}")
 
-        # 6b. Ilustración referencial del tema (Cloudflare Workers AI)
+        # 6b. Ilustración referencial del tema (Cloudflare Workers AI con prompt visual pedagógico)
         imagen_url = None
         try:
-            imagen_bytes = generar_imagen_referencial(titulo_final, texto_adaptado)
+            prompt_visual = resultado_ia.get("prompt_visual_ingles", "")
+            imagen_bytes = generar_imagen_referencial(
+                titulo=titulo_final,
+                texto_apoyo=texto_adaptado,
+                prompt_visual=prompt_visual,
+            )
             imagen_url = db.upload_file(
                 bucket="accesibles",
                 path=f"imagenes/ref_{adapt_id}.jpg",

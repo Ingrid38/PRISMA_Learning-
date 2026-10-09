@@ -12,21 +12,30 @@ CLOUDFLARE_API_TOKEN = (os.getenv("CLOUDFLARE_API_TOKEN") or "").strip()
 MODELO_IMAGEN = "@cf/black-forest-labs/flux-1-schnell"
 
 
-def generar_imagen_referencial(titulo: str, texto_apoyo: str = "") -> bytes:
+def generar_imagen_referencial(titulo: str = "", texto_apoyo: str = "", prompt_visual: str = "") -> bytes:
     """
-    Genera una ilustración escolar sencilla del tema con Cloudflare Workers AI.
+    Genera una ilustración escolar sencilla del tema con Cloudflare Workers AI (Flux Schnell).
+    Utiliza preferentemente un prompt visual en inglés generado por la IA para evitar
+    texto deformado y asegurar calidad artística vectorial.
     Devuelve los bytes JPEG/PNG de la imagen.
     """
     if not CLOUDFLARE_ACCOUNT_ID or not CLOUDFLARE_API_TOKEN:
         raise ValueError("Faltan CLOUDFLARE_ACCOUNT_ID o CLOUDFLARE_API_TOKEN")
 
-    idea = _resumir_tema(titulo, texto_apoyo)
-    prompt = (
-        "Simple educational classroom diagram for children about this topic: "
-        f"{idea}. "
-        "Flat illustration, white background, few clear objects, bright colors, "
-        "high contrast, no text, no letters, no numbers, no watermark, no logo."
-    )
+    if prompt_visual and len(prompt_visual.strip()) > 15:
+        # Usar el prompt visual curado por Gemini/Groq
+        prompt = (
+            f"{prompt_visual.strip()}, "
+            "clean modern educational vector illustration, vibrant flat colors, isolated on solid white background, "
+            "minimalist textbook art, high quality, completely wordless, strictly no text, no letters, no words, no labels, no symbols"
+        )
+    else:
+        idea = _resumir_tema(titulo, texto_apoyo)
+        prompt = (
+            f"Educational clean vector illustration of: {idea}. "
+            "Minimalist flat cartoon style for school textbook, bright clear colors, solid white background, "
+            "completely wordless, zero text, no letters, no characters, no words, no labels, no writing, no watermark"
+        )
 
     url = (
         "https://api.cloudflare.com/client/v4/accounts/"
